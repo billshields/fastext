@@ -1,5 +1,6 @@
 from django.db import transaction
-from django.db.models import OuterRef, Subquery, Value
+from django.db.models import OuterRef, Subquery, Value, Case, When, F, FloatField
+from django.db.models.functions import Cast
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,11 +20,49 @@ class DocumentListView(generics.ListAPIView):
             user=self.request.user,
         ).values('current_position')[:1]
 
-        return Document.objects.filter(
+        last_read_subquery = ReadingSession.objects.filter(
+            document=OuterRef('pk'),
+            user=self.request.user,
+        ).values('last_read_at')[:1]
+
+        qs = Document.objects.filter(
             user=self.request.user,
         ).annotate(
             current_position=Subquery(position_subquery, default=Value(0)),
-        ).order_by('-uploaded_at')
+            last_read_at=Subquery(last_read_subquery),
+            progress=Case(
+                When(total_words=0, then=Value(0.0)),
+                default=Cast(F('current_position'), FloatField()) / Cast(F('total_words'), FloatField()),
+                output_field=FloatField(),
+            ),
+        )
+
+        # Search filter
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            qs = qs.filter(title__icontains=search)
+
+        # Status filter
+        status_filter = self.request.query_params.get('status', '').strip()
+        valid_statuses = {choice[0] for choice in Document.Status.choices}
+        if status_filter and status_filter in valid_statuses:
+            qs = qs.filter(status=status_filter)
+
+        # Sort
+        sort_options = {
+            'title_asc': 'title',
+            'title_desc': '-title',
+            'uploaded_newest': '-uploaded_at',
+            'uploaded_oldest': 'uploaded_at',
+            'last_read': F('last_read_at').desc(nulls_last=True),
+            'progress_desc': '-progress',
+            'progress_asc': 'progress',
+        }
+        sort = self.request.query_params.get('sort', 'uploaded_newest').strip()
+        ordering = sort_options.get(sort, '-uploaded_at')
+        qs = qs.order_by(ordering)
+
+        return qs
 
 
 class DocumentUploadView(APIView):

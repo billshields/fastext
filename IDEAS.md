@@ -12,7 +12,6 @@
 - Support more file types (txt, docx, html)
 
 ### Reader Experience
-- Keyboard shortcut overlay / help tooltip — users don't know Space, arrows, Up/Down exist
 - Progress scrubber — click/drag bar to jump to any position in the document
 - Chapter navigation — jump between chapters if the document has them (chapter_index is already stored)
 - Sentence context preview — show the surrounding sentence below the RSVP display
@@ -27,9 +26,7 @@
 - Words read per session summary
 
 ### Library Management
-- Search and filter documents
 - Tags / folders for organization
-- Sort by last read, upload date, progress, title
 - Bulk delete
 
 ### Mobile Support

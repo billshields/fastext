@@ -26,6 +26,10 @@
             <span id="tts-speed-cap" class="tts-cap-msg" hidden>TTS speed capped</span>
         </div>
         <button id="btn-settings" class="btn btn-control" title="Settings">&#9881;</button>
+        <div class="help-btn-wrapper">
+            <button id="btn-help" class="btn btn-control btn-help" title="Keyboard shortcuts (?)">?</button>
+            <span id="help-hint" class="help-hint">Shortcuts</span>
+        </div>
     </div>
 
     <div id="settings-panel" class="settings-panel" hidden>
@@ -92,6 +96,44 @@
             </select>
         </div>
         <button id="btn-close-settings" class="btn btn-secondary">Close</button>
+    </div>
+
+    <div id="help-overlay" class="help-overlay" hidden>
+        <div class="help-overlay-backdrop"></div>
+        <div class="help-overlay-content">
+            <h3>Keyboard Shortcuts</h3>
+            <div class="shortcut-list">
+                <div class="shortcut-row">
+                    <kbd>Space</kbd>
+                    <span>Play / Pause</span>
+                </div>
+                <div class="shortcut-row">
+                    <kbd>&larr;</kbd>
+                    <span>Rewind 1 word</span>
+                </div>
+                <div class="shortcut-row">
+                    <kbd>&rarr;</kbd>
+                    <span>Forward 1 word</span>
+                </div>
+                <div class="shortcut-row">
+                    <kbd>&uarr;</kbd>
+                    <span>Speed up (+25 WPM)</span>
+                </div>
+                <div class="shortcut-row">
+                    <kbd>&darr;</kbd>
+                    <span>Slow down (-25 WPM)</span>
+                </div>
+                <div class="shortcut-row">
+                    <kbd>?</kbd>
+                    <span>Toggle this help</span>
+                </div>
+                <div class="shortcut-row">
+                    <kbd>Esc</kbd>
+                    <span>Close overlay</span>
+                </div>
+            </div>
+            <p class="help-dismiss-hint">Press <kbd>?</kbd> or <kbd>Esc</kbd> to close</p>
+        </div>
     </div>
 </div>
 {% endblock %}

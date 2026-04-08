@@ -31,6 +31,8 @@
         title: document.getElementById('doc-title'),
         progress: document.getElementById('progress-indicator'),
         settingsPanel: document.getElementById('settings-panel'),
+        helpOverlay: document.getElementById('help-overlay'),
+        helpHint: document.getElementById('help-hint'),
     };
 
     // Initialize reader
@@ -79,6 +81,7 @@
 
             updateProgress();
             await loadPreferences();
+            initHelpHint();
         } catch (err) {
             elements.before.textContent = '';
             elements.pivot.textContent = 'Error loading document';
@@ -280,6 +283,37 @@
         if (wasPlaying && ttsEnabled && ttsController) speakFromPosition(engine.currentPos);
     });
 
+    // Custom drag for WPM slider — tracks cursor even when drifting vertically
+    (function () {
+        const slider = elements.wpmSlider;
+        const min = +slider.min, max = +slider.max, step = +slider.step;
+        let dragging = false;
+
+        function valueFromX(clientX) {
+            const rect = slider.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+            const raw = min + ratio * (max - min);
+            return Math.round(raw / step) * step;
+        }
+
+        slider.addEventListener('pointerdown', (e) => {
+            dragging = true;
+            slider.value = valueFromX(e.clientX);
+            slider.dispatchEvent(new Event('input'));
+            e.preventDefault();
+        });
+
+        document.addEventListener('pointermove', (e) => {
+            if (!dragging) return;
+            slider.value = valueFromX(e.clientX);
+            slider.dispatchEvent(new Event('input'));
+        });
+
+        document.addEventListener('pointerup', () => {
+            dragging = false;
+        });
+    })();
+
     elements.wpmSlider.addEventListener('input', (e) => {
         const wpm = parseInt(e.target.value);
         updateSpeedLabel(wpm);
@@ -408,9 +442,65 @@
         };
     }
 
+    // Help overlay
+    let helpVisible = false;
+    let wasPlayingBeforeHelp = false;
+
+    function showHelp() {
+        wasPlayingBeforeHelp = engine && isPlaying();
+        if (wasPlayingBeforeHelp) {
+            elements.playPause.click(); // pause via existing logic
+        }
+        elements.helpOverlay.hidden = false;
+        helpVisible = true;
+        dismissHelpHint();
+    }
+
+    function hideHelp() {
+        elements.helpOverlay.hidden = true;
+        helpVisible = false;
+    }
+
+    function toggleHelp() {
+        helpVisible ? hideHelp() : showHelp();
+    }
+
+    function dismissHelpHint() {
+        if (elements.helpHint) {
+            elements.helpHint.classList.add('hidden');
+            localStorage.setItem('speedreader_help_seen', '1');
+        }
+    }
+
+    function initHelpHint() {
+        if (localStorage.getItem('speedreader_help_seen')) {
+            if (elements.helpHint) elements.helpHint.classList.add('hidden');
+        }
+    }
+
+    document.getElementById('btn-help').addEventListener('click', toggleHelp);
+    elements.helpOverlay.querySelector('.help-overlay-backdrop').addEventListener('click', hideHelp);
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+        if (e.key === '?') {
+            e.preventDefault();
+            toggleHelp();
+            return;
+        }
+
+        if (e.code === 'Escape') {
+            if (helpVisible) {
+                e.preventDefault();
+                hideHelp();
+            }
+            return;
+        }
+
+        if (helpVisible) return;
+
         switch (e.code) {
             case 'Space':
                 e.preventDefault();

@@ -17,6 +17,26 @@
         <span id="upload-msg">Uploading...</span>
     </div>
 
+    <div class="library-toolbar">
+        <input type="text" id="search-input" class="toolbar-input" placeholder="Search by title...">
+        <select id="sort-select" class="toolbar-select">
+            <option value="uploaded_newest">Newest first</option>
+            <option value="uploaded_oldest">Oldest first</option>
+            <option value="title_asc">Title A-Z</option>
+            <option value="title_desc">Title Z-A</option>
+            <option value="last_read">Last read</option>
+            <option value="progress_desc">Most progress</option>
+            <option value="progress_asc">Least progress</option>
+        </select>
+        <select id="status-select" class="toolbar-select">
+            <option value="">All statuses</option>
+            <option value="completed">Completed</option>
+            <option value="processing">Processing</option>
+            <option value="pending">Pending</option>
+            <option value="failed">Failed</option>
+        </select>
+    </div>
+
     <div id="documents-list" class="documents-grid">
         <p class="loading-msg">Loading your library...</p>
     </div>
@@ -38,13 +58,30 @@
     const uploadStatus = document.getElementById('upload-status');
     const uploadMsg = document.getElementById('upload-msg');
 
+    const searchInput = document.getElementById('search-input');
+    const sortSelect = document.getElementById('sort-select');
+    const statusSelect = document.getElementById('status-select');
+
+    function hasActiveFilters() {
+        return searchInput.value.trim() !== '' || statusSelect.value !== '';
+    }
+
     async function loadDocuments() {
         try {
-            const data = await api.get('/api/documents/');
+            const params = new URLSearchParams();
+            if (searchInput.value.trim()) params.set('search', searchInput.value.trim());
+            if (sortSelect.value) params.set('sort', sortSelect.value);
+            if (statusSelect.value) params.set('status', statusSelect.value);
+            const qs = params.toString();
+            const url = '/api/documents/' + (qs ? '?' + qs : '');
+            const data = await api.get(url);
             docsList.innerHTML = '';
 
             if (data.length === 0) {
                 emptyState.hidden = false;
+                emptyState.querySelector('p').textContent = hasActiveFilters()
+                    ? 'No documents match your search or filters.'
+                    : 'No books yet. Upload a PDF or EPUB to get started.';
                 return;
             }
             emptyState.hidden = true;
@@ -138,6 +175,14 @@
         api.logout();
         window.location.href = '/';
     });
+
+    let searchTimeout = null;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(loadDocuments, 300);
+    });
+    sortSelect.addEventListener('change', loadDocuments);
+    statusSelect.addEventListener('change', loadDocuments);
 
     loadDocuments();
     // Poll for processing documents

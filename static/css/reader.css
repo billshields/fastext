@@ -1,0 +1,506 @@
+:root {
+    --bg-color: #1a1a2e;
+    --text-color: #e0e0e0;
+    --ui-color: #0f3460;
+    --font-family: Georgia;
+    --font-size: 48px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Open Sans', sans-serif;
+    background: var(--bg-color);
+    color: var(--text-color);
+    min-height: 100vh;
+}
+
+/* Auth pages */
+.auth-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+}
+
+.auth-title {
+    font-size: 2.5rem;
+    margin-bottom: 0.25rem;
+    color: var(--text-color);
+}
+
+.auth-subtitle {
+    color: #888;
+    margin-bottom: 2rem;
+}
+
+.auth-form {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.auth-form h2 {
+    text-align: center;
+}
+
+.auth-form input {
+    padding: 0.75rem 1rem;
+    border: 1px solid #333;
+    border-radius: 6px;
+    background: #16213e;
+    color: var(--text-color);
+    font-size: 1rem;
+}
+
+.auth-form input:focus {
+    outline: none;
+    border-color: var(--ui-color);
+}
+
+.auth-switch {
+    text-align: center;
+    color: #888;
+}
+
+.auth-switch a {
+    color: #4a90d9;
+    text-decoration: none;
+}
+
+.error-msg {
+    color: #e74c3c;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: opacity 0.2s;
+}
+
+.btn:hover {
+    opacity: 0.85;
+}
+
+.btn-primary {
+    background: var(--ui-color);
+    color: var(--text-color);
+}
+
+.btn-secondary {
+    background: #333;
+    color: var(--text-color);
+}
+
+.btn-danger {
+    background: #c0392b;
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.35rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+/* Library page */
+.library-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.library-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.upload-status {
+    background: #16213e;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.documents-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.doc-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #16213e;
+    padding: 1.25rem;
+    border-radius: 8px;
+    border: 1px solid #222;
+}
+
+.doc-title {
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.doc-meta {
+    color: #888;
+    font-size: 0.85rem;
+}
+
+.doc-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+    text-transform: uppercase;
+}
+
+.badge-pending { background: #f39c12; color: #000; }
+.badge-processing { background: #3498db; color: #fff; }
+.badge-failed { background: #e74c3c; color: #fff; }
+
+.progress-bar {
+    width: 120px;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    margin-top: 0.5rem;
+    display: inline-block;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #4a90d9;
+    border-radius: 2px;
+    transition: width 0.3s;
+}
+
+.progress-text {
+    font-size: 0.8rem;
+    color: #888;
+    margin-left: 0.5rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem;
+    color: #888;
+}
+
+.loading-msg {
+    text-align: center;
+    color: #888;
+    padding: 2rem;
+}
+
+/* Reader page */
+.reader-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--bg-color);
+    color: var(--text-color);
+    position: relative;
+}
+
+.reader-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    font-size: 0.9rem;
+}
+
+.back-link {
+    color: var(--text-color);
+    text-decoration: none;
+    opacity: 0.7;
+}
+
+.back-link:hover {
+    opacity: 1;
+}
+
+.doc-title {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 50%;
+}
+
+.progress-indicator {
+    font-weight: 600;
+}
+
+/* RSVP display */
+.rsvp-display {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    user-select: none;
+}
+
+.rsvp-word-container {
+    font-family: var(--font-family);
+    font-size: var(--font-size);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    position: relative;
+}
+
+.rsvp-before {
+    color: var(--text-color);
+}
+
+.rsvp-pivot {
+    color: var(--text-color);
+    font-weight: normal;
+}
+
+.rsvp-pivot.highlight {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+.rsvp-after {
+    color: var(--text-color);
+}
+
+.rsvp-focus-line {
+    position: absolute;
+    left: 50%;
+    top: 45%;
+    width: 2px;
+    height: 20%;
+    background: rgba(231, 76, 60, 0.3);
+    transform: translateX(-50%);
+    pointer-events: none;
+    display: none;
+}
+
+.rsvp-focus-line.visible {
+    display: block;
+}
+
+/* Controls */
+.reader-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.btn-control {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--ui-color);
+    color: var(--text-color);
+    font-size: 1.1rem;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-control:hover {
+    opacity: 0.85;
+}
+
+.btn-play {
+    font-size: 1.3rem;
+}
+
+#btn-play-pause {
+    width: 56px;
+    height: 56px;
+}
+
+.wpm-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+}
+
+#wpm-slider {
+    width: 150px;
+    accent-color: var(--ui-color);
+}
+
+#wpm-label {
+    font-size: 0.9rem;
+    min-width: 80px;
+}
+
+.tts-cap-msg {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    color: #f39c12;
+    white-space: nowrap;
+    margin-bottom: 0.25rem;
+}
+
+/* Settings panel */
+.settings-panel {
+    position: absolute;
+    right: 1rem;
+    bottom: 5rem;
+    background: #16213e;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 300px;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.settings-panel h3 {
+    margin-bottom: 1rem;
+}
+
+.setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.setting-row label {
+    font-size: 0.9rem;
+    color: #aaa;
+}
+
+.setting-row input[type="color"] {
+    width: 40px;
+    height: 30px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background: transparent;
+}
+
+.setting-row select {
+    padding: 0.4rem;
+    background: #0a0f1e;
+    color: var(--text-color);
+    border: 1px solid #333;
+    border-radius: 4px;
+}
+
+.setting-row input[type="range"] {
+    width: 100px;
+    accent-color: var(--ui-color);
+}
+
+#font-size-label {
+    font-size: 0.8rem;
+    min-width: 35px;
+}
+
+/* Editor page */
+.editor-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--bg-color);
+    color: var(--text-color);
+}
+
+.editor-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.editor-header h2 {
+    flex: 1;
+    font-size: 1rem;
+    font-weight: normal;
+    opacity: 0.7;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.editor-header .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.word-count {
+    font-size: 0.85rem;
+    color: #888;
+}
+
+.editor-status {
+    padding: 0.6rem 1.5rem;
+    background: #16213e;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.editor-status-error {
+    background: #3c1414;
+    color: #e74c3c;
+}
+
+.text-editor {
+    flex: 1;
+    overflow: hidden;
+    background: #0a0f1e;
+    color: var(--text-color);
+}
+
+.text-editor .cm-editor {
+    height: 100%;
+    background: #0a0f1e;
+    color: var(--text-color);
+}
+
+.text-editor .cm-editor.cm-focused {
+    outline: none;
+}

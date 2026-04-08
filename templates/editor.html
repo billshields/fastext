@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}SpeedReader - Edit{% endblock %}
+
+{% block body %}
+<div class="editor-container">
+    <header class="editor-header">
+        <a href="/library/" class="back-link">&larr; Library</a>
+        <h2 id="doc-title">Loading...</h2>
+        <div class="header-actions">
+            <span id="word-count" class="word-count"></span>
+            <button id="btn-save" class="btn btn-primary" disabled>Save</button>
+        </div>
+    </header>
+
+    <div id="editor-status" class="editor-status" hidden>
+        <span id="status-msg"></span>
+    </div>
+
+    <div id="text-editor" class="text-editor"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module">
+    import { EditorView, keymap } from 'https://esm.sh/@codemirror/view@6';
+    import { EditorState } from 'https://esm.sh/@codemirror/state@6';
+    import { history, historyKeymap } from 'https://esm.sh/@codemirror/commands@6';
+    import { search, searchKeymap } from 'https://esm.sh/@codemirror/search@6';
+
+    if (!api.isAuthenticated()) {
+        window.location.href = '/';
+    }
+
+    const pathParts = window.location.pathname.split('/');
+    const docId = parseInt(pathParts[2]);
+    if (!docId) window.location.href = '/library/';
+
+    const docTitle = document.getElementById('doc-title');
+    const wordCount = document.getElementById('word-count');
+    const btnSave = document.getElementById('btn-save');
+    const editorStatus = document.getElementById('editor-status');
+    const statusMsg = document.getElementById('status-msg');
+
+    let originalText = '';
+
+    const theme = EditorView.theme({
+        '&': {
+            height: '100%',
+            fontSize: '1rem',
+        },
+        '.cm-scroller': {
+            fontFamily: 'Georgia, serif',
+            lineHeight: '1.8',
+            overflow: 'auto',
+        },
+        '.cm-content': {
+            padding: '1.5rem',
+            caretColor: '#e0e0e0',
+        },
+        '.cm-cursor': {
+            borderLeftColor: '#e0e0e0',
+        },
+        '.cm-selectionBackground, ::selection': {
+            backgroundColor: '#264f78 !important',
+        },
+        '.cm-activeLine': {
+            backgroundColor: 'transparent',
+        },
+        '.cm-gutters': {
+            display: 'none',
+        },
+    });
+
+    function updateWordCount(text) {
+        const trimmed = text.trim();
+        const count = trimmed ? trimmed.split(/\s+/).length : 0;
+        wordCount.textContent = count.toLocaleString() + ' words';
+    }
+
+    const view = new EditorView({
+        state: EditorState.create({
+            doc: '',
+            extensions: [
+                theme,
+                EditorView.lineWrapping,
+                history(),
+                search(),
+                keymap.of([...historyKeymap, ...searchKeymap]),
+                EditorView.updateListener.of((update) => {
+                    if (update.docChanged) {
+                        updateWordCount(update.state.doc.toString());
+                    }
+                }),
+            ],
+        }),
+        parent: document.getElementById('text-editor'),
+    });
+    window.cmView = view;
+
+    function getText() {
+        return view.state.doc.toString().trim();
+    }
+
+    function setText(text) {
+        view.dispatch({
+            changes: { from: 0, to: view.state.doc.length, insert: text },
+        });
+    }
+
+    function showStatus(msg, isError) {
+        statusMsg.textContent = msg;
+        editorStatus.hidden = false;
+        editorStatus.className = 'editor-status' + (isError ? ' editor-status-error' : '');
+        if (!isError) {
+            setTimeout(() => { editorStatus.hidden = true; }, 3000);
+        }
+    }
+
+    async function loadText() {
+        try {
+            const data = await api.get(`/api/documents/${docId}/text/`);
+            docTitle.textContent = data.title;
+            setText(data.text);
+            originalText = data.text;
+            btnSave.disabled = false;
+            updateWordCount(data.text);
+        } catch (err) {
+            docTitle.textContent = 'Error';
+        }
+    }
+
+    btnSave.addEventListener('click', async () => {
+        const text = getText();
+        if (!text) {
+            showStatus('Text cannot be empty.', true);
+            return;
+        }
+
+        btnSave.disabled = true;
+        btnSave.textContent = 'Saving...';
+
+        try {
+            const data = await api.put(`/api/documents/${docId}/text/`, { text });
+            originalText = text;
+            showStatus(`Saved! ${data.total_words.toLocaleString()} words.`, false);
+        } catch (err) {
+            showStatus('Failed to save: ' + (err.message || 'Unknown error'), true);
+        } finally {
+            btnSave.disabled = false;
+            btnSave.textContent = 'Save';
+        }
+    });
+
+    window.addEventListener('beforeunload', (e) => {
+        if (getText() !== originalText) {
+            e.preventDefault();
+        }
+    });
+
+    loadText();
+</script>
+{% endblock %}

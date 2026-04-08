@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}SpeedReader - Login{% endblock %}
+
+{% block body %}
+<div class="auth-container">
+    <h1 class="auth-title">SpeedReader</h1>
+    <p class="auth-subtitle">Read faster. Retain more.</p>
+
+    <div id="login-form" class="auth-form">
+        <h2>Login</h2>
+        <input type="text" id="login-username" placeholder="Username" autocomplete="username">
+        <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+        <button id="btn-login" class="btn btn-primary">Login</button>
+        <p class="auth-switch">Don't have an account? <a href="#" id="show-register">Register</a></p>
+        <p id="login-error" class="error-msg" hidden></p>
+    </div>
+
+    <div id="register-form" class="auth-form" hidden>
+        <h2>Register</h2>
+        <input type="text" id="reg-username" placeholder="Username" autocomplete="username">
+        <input type="email" id="reg-email" placeholder="Email" autocomplete="email">
+        <input type="password" id="reg-password" placeholder="Password (min 8 characters)" autocomplete="new-password">
+        <button id="btn-register" class="btn btn-primary">Register</button>
+        <p class="auth-switch">Already have an account? <a href="#" id="show-login">Login</a></p>
+        <p id="register-error" class="error-msg" hidden></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    if (api.isAuthenticated()) {
+        window.location.href = '/library/';
+    }
+
+    document.getElementById('show-register').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('login-form').hidden = true;
+        document.getElementById('register-form').hidden = false;
+    });
+
+    document.getElementById('show-login').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('register-form').hidden = true;
+        document.getElementById('login-form').hidden = false;
+    });
+
+    document.getElementById('btn-login').addEventListener('click', async () => {
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+        const errorEl = document.getElementById('login-error');
+        errorEl.hidden = true;
+
+        try {
+            const data = await api.post('/api/auth/login/', { username, password }, false);
+            api.setTokens(data.access, data.refresh);
+            window.location.href = '/library/';
+        } catch (err) {
+            errorEl.textContent = 'Invalid username or password.';
+            errorEl.hidden = false;
+        }
+    });
+
+    document.getElementById('btn-register').addEventListener('click', async () => {
+        const username = document.getElementById('reg-username').value;
+        const email = document.getElementById('reg-email').value;
+        const password = document.getElementById('reg-password').value;
+        const errorEl = document.getElementById('register-error');
+        errorEl.hidden = true;
+
+        try {
+            const data = await api.post('/api/auth/register/', { username, email, password }, false);
+            api.setTokens(data.tokens.access, data.tokens.refresh);
+            window.location.href = '/library/';
+        } catch (err) {
+            errorEl.textContent = err.message || 'Registration failed.';
+            errorEl.hidden = false;
+        }
+    });
+
+    // Allow Enter key to submit
+    document.getElementById('login-password').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('btn-login').click();
+    });
+    document.getElementById('reg-password').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('btn-register').click();
+    });
+</script>
+{% endblock %}

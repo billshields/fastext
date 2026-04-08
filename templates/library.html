@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}SpeedReader - Library{% endblock %}
+
+{% block body %}
+<div class="library-container">
+    <header class="library-header">
+        <h1>My Library</h1>
+        <div class="header-actions">
+            <button id="btn-upload" class="btn btn-primary">Upload Book</button>
+            <button id="btn-logout" class="btn btn-secondary">Logout</button>
+        </div>
+    </header>
+
+    <input type="file" id="file-input" accept=".pdf,.epub" hidden>
+
+    <div id="upload-status" class="upload-status" hidden>
+        <span id="upload-msg">Uploading...</span>
+    </div>
+
+    <div id="documents-list" class="documents-grid">
+        <p class="loading-msg">Loading your library...</p>
+    </div>
+
+    <div id="empty-state" class="empty-state" hidden>
+        <p>No books yet. Upload a PDF or EPUB to get started.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    if (!api.isAuthenticated()) {
+        window.location.href = '/';
+    }
+
+    const docsList = document.getElementById('documents-list');
+    const emptyState = document.getElementById('empty-state');
+    const uploadStatus = document.getElementById('upload-status');
+    const uploadMsg = document.getElementById('upload-msg');
+
+    async function loadDocuments() {
+        try {
+            const data = await api.get('/api/documents/');
+            docsList.innerHTML = '';
+
+            if (data.length === 0) {
+                emptyState.hidden = false;
+                return;
+            }
+            emptyState.hidden = true;
+
+            for (const doc of data) {
+                const card = document.createElement('div');
+                card.className = 'doc-card';
+
+                const progress = doc.total_words > 0
+                    ? Math.round(((doc.current_position || 0) / doc.total_words) * 100)
+                    : null;
+                const statusBadge = doc.status !== 'completed'
+                    ? `<span class="badge badge-${doc.status}">${doc.status}</span>`
+                    : '';
+                const progressBar = progress !== null
+                    ? `<div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div>
+                       <span class="progress-text">${progress}%</span>`
+                    : '';
+
+                card.innerHTML = `
+                    <div class="doc-info">
+                        <h3 class="doc-title">${doc.title}</h3>
+                        <span class="doc-meta">${doc.file_type.toUpperCase()} &middot; ${formatSize(doc.file_size)}</span>
+                        ${statusBadge}
+                        ${progressBar}
+                    </div>
+                    <div class="doc-actions">
+                        ${doc.status === 'completed' ? `<button class="btn btn-primary btn-sm" onclick="openReader(${doc.id})">Read</button><button class="btn btn-secondary btn-sm" onclick="openEditor(${doc.id})">Edit</button>` : ''}
+                        <button class="btn btn-danger btn-sm" onclick="deleteDoc(${doc.id})">Delete</button>
+                    </div>
+                `;
+                docsList.appendChild(card);
+            }
+        } catch (err) {
+            docsList.innerHTML = '<p class="error-msg">Failed to load documents.</p>';
+        }
+    }
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    function openReader(docId) {
+        window.location.href = `/read/${docId}/`;
+    }
+
+    function openEditor(docId) {
+        window.location.href = `/edit/${docId}/`;
+    }
+
+    async function deleteDoc(docId) {
+        if (!confirm('Delete this document?')) return;
+        try {
+            await api.delete(`/api/documents/${docId}/`);
+            loadDocuments();
+        } catch (err) {
+            alert('Failed to delete document.');
+        }
+    }
+
+    // Upload handling
+    document.getElementById('btn-upload').addEventListener('click', () => {
+        document.getElementById('file-input').click();
+    });
+
+    document.getElementById('file-input').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        uploadStatus.hidden = false;
+        uploadMsg.textContent = `Uploading ${file.name}...`;
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            await api.upload('/api/documents/upload/', formData);
+            uploadMsg.textContent = 'Upload complete! Processing...';
+            setTimeout(() => {
+                uploadStatus.hidden = true;
+                loadDocuments();
+            }, 2000);
+        } catch (err) {
+            uploadMsg.textContent = 'Upload failed: ' + (err.message || 'Unknown error');
+        }
+        e.target.value = '';
+    });
+
+    document.getElementById('btn-logout').addEventListener('click', () => {
+        api.logout();
+        window.location.href = '/';
+    });
+
+    loadDocuments();
+    // Poll for processing documents
+    setInterval(loadDocuments, 10000);
+</script>
+{% endblock %}

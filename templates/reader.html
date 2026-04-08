@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}SpeedReader - Reading{% endblock %}
+
+{% block body %}
+<div id="reader-container" class="reader-container">
+    <div id="reader-topbar" class="reader-topbar">
+        <a href="/library/" class="back-link">&larr; Library</a>
+        <span id="doc-title" class="doc-title"></span>
+        <span id="progress-indicator" class="progress-indicator">0%</span>
+    </div>
+
+    <div id="rsvp-display" class="rsvp-display">
+        <div class="rsvp-word-container">
+            <span id="rsvp-before" class="rsvp-before"></span><span id="rsvp-pivot" class="rsvp-pivot"></span><span id="rsvp-after" class="rsvp-after"></span>
+        </div>
+        <div class="rsvp-focus-line"></div>
+    </div>
+
+    <div id="reader-controls" class="reader-controls">
+        <button id="btn-rewind" class="btn btn-control" title="Rewind 10 words">&laquo;</button>
+        <button id="btn-play-pause" class="btn btn-control btn-play">&#9654;</button>
+        <button id="btn-forward" class="btn btn-control" title="Forward 10 words">&raquo;</button>
+        <div class="wpm-control">
+            <input type="range" id="wpm-slider" min="100" max="1000" step="25" value="300">
+            <span id="wpm-label">300 WPM</span>
+            <span id="tts-speed-cap" class="tts-cap-msg" hidden>TTS speed capped</span>
+        </div>
+        <button id="btn-settings" class="btn btn-control" title="Settings">&#9881;</button>
+    </div>
+
+    <div id="settings-panel" class="settings-panel" hidden>
+        <h3>Settings</h3>
+        <div class="setting-row">
+            <label>Background Color</label>
+            <input type="color" id="set-bg-color" value="#1a1a2e">
+        </div>
+        <div class="setting-row">
+            <label>Text Color</label>
+            <input type="color" id="set-text-color" value="#e0e0e0">
+        </div>
+        <div class="setting-row">
+            <label>UI Color</label>
+            <input type="color" id="set-ui-color" value="#0f3460">
+        </div>
+        <div class="setting-row">
+            <label>Font</label>
+            <select id="set-font">
+                <option value="Georgia">Georgia</option>
+                <option value="Merriweather">Merriweather</option>
+                <option value="Open Sans">Open Sans</option>
+                <option value="Roboto Mono">Roboto Mono</option>
+                <option value="system-ui">System</option>
+            </select>
+        </div>
+        <div class="setting-row">
+            <label>Font Size</label>
+            <input type="range" id="set-font-size" min="24" max="96" step="4" value="48">
+            <span id="font-size-label">48px</span>
+        </div>
+        <div class="setting-row">
+            <label>Words per flash</label>
+            <select id="set-chunk-size">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+            </select>
+        </div>
+        <div class="setting-row">
+            <label>Highlight pivot letter</label>
+            <input type="checkbox" id="set-pivot-highlight">
+        </div>
+        <div class="setting-row">
+            <label>Focus line</label>
+            <input type="checkbox" id="set-focus-line">
+        </div>
+        <div class="setting-row">
+            <label>Sentence pause</label>
+            <input type="checkbox" id="set-sentence-pause">
+        </div>
+        <div class="setting-row">
+            <label>Long word pause</label>
+            <input type="checkbox" id="set-long-word-pause">
+        </div>
+        <div class="setting-row">
+            <label>Text-to-Speech</label>
+            <input type="checkbox" id="set-tts-enabled">
+        </div>
+        <div class="setting-row">
+            <label>TTS Voice</label>
+            <select id="set-tts-voice">
+                <option value="">Loading voices...</option>
+            </select>
+        </div>
+        <button id="btn-close-settings" class="btn btn-secondary">Close</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% load static %}
+<script src="{% static 'js/reader.js' %}"></script>
+<script src="{% static 'js/tts.js' %}"></script>
+<script src="{% static 'js/app.js' %}"></script>
+{% endblock %}

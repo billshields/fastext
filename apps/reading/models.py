@@ -11,6 +11,7 @@ class ReadingSession(models.Model):
     total_reading_time = models.PositiveIntegerField(default=0)
     started_at = models.DateTimeField(auto_now_add=True)
     last_read_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'reading_sessions'

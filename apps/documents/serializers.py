@@ -16,6 +16,11 @@ class DocumentSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class DocumentPasteSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=500)
+    text = serializers.CharField(min_length=1, max_length=5_000_000)
+
+
 class DocumentUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
     title = serializers.CharField(max_length=500, required=False)

@@ -1,13 +1,11 @@
-# SpeedReader — Ideas & Roadmap
+# GottaWordFast — Ideas & Roadmap
 
 ## Bugs / Polish
 - No loading indicator when CodeMirror CDN modules are being fetched in the editor
-- Chunk size in reader settings doesn't persist across documents (stored per-session, not per-preference)
 
 ## Features
 
 ### Content Input
-- Paste-to-read — let users paste raw text directly instead of requiring a file upload
 - URL import — paste a URL and extract article text (readability-style)
 - Support more file types (txt, docx, html)
 
@@ -27,7 +25,6 @@
 
 ### Library Management
 - Tags / folders for organization
-- Bulk delete
 
 ### Mobile Support
 - Tap to play/pause

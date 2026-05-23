@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}GottaWordFast - Stats{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block body %}
+<div class="stats-container">
+    <header class="stats-header">
+        <a href="/library/" class="back-link">&larr; Library</a>
+        <h1>Reading Stats</h1>
+        <div id="theme-switcher" class="theme-switcher" style="margin-left:auto;"></div>
+    </header>
+
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-value" id="stat-time">--</div>
+            <div class="stat-label">Total Reading Time</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="stat-words">--</div>
+            <div class="stat-label">Words Read</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="stat-completed">--</div>
+            <div class="stat-label">Documents Completed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="stat-streak">--</div>
+            <div class="stat-label">Day Streak</div>
+            <div class="stat-sub" id="stat-longest-streak"></div>
+        </div>
+    </div>
+
+    <div class="stats-today">
+        <span id="today-summary"></span>
+    </div>
+
+    <div class="chart-section">
+        <div class="chart-header">
+            <h3>Reading Time</h3>
+            <div class="period-toggle">
+                <button class="btn btn-sm period-btn active" data-period="week">Week</button>
+                <button class="btn btn-sm period-btn" data-period="month">Month</button>
+                <button class="btn btn-sm period-btn" data-period="year">Year</button>
+            </div>
+        </div>
+        <canvas id="reading-time-chart" height="200"></canvas>
+    </div>
+
+    <div class="chart-section">
+        <div class="chart-header">
+            <h3>WPM Over Time</h3>
+            <select id="wpm-doc-filter" class="toolbar-select">
+                <option value="">All Documents</option>
+            </select>
+        </div>
+        <canvas id="wpm-chart" height="200"></canvas>
+    </div>
+
+    <div class="chart-section">
+        <h3>Documents</h3>
+        <div id="doc-stats-list" class="doc-stats-list">
+            <p class="loading-msg">Loading...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% load static %}
+<script src="{% static 'js/stats.js' %}"></script>
+{% endblock %}

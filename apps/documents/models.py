@@ -11,10 +11,10 @@ class Document(models.Model):
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='documents')
     title = models.CharField(max_length=500)
-    original_filename = models.CharField(max_length=500)
-    file = models.FileField(upload_to='uploads/%Y/%m/')
+    original_filename = models.CharField(max_length=500, blank=True, default='')
+    file = models.FileField(upload_to='uploads/%Y/%m/', null=True, blank=True)
     file_type = models.CharField(max_length=10)
-    file_size = models.PositiveIntegerField()
+    file_size = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     total_words = models.PositiveIntegerField(default=0)
     error_message = models.TextField(blank=True, default='')

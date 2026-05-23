@@ -1,8 +1,11 @@
+from django.db.models import F
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.documents.models import Document, DocumentChunk
+from apps.stats.models import DailyReadingLog
 from .models import ReadingSession
 from .serializers import ReadingSessionSerializer, ProgressSerializer, SessionUpdateSerializer
 
@@ -81,11 +84,36 @@ class ProgressView(APIView):
         except ReadingSession.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        session.current_position = serializer.validated_data['position']
+        old_position = session.current_position
+        new_position = serializer.validated_data['position']
+        words_advanced = max(0, new_position - old_position)
         reading_time = serializer.validated_data.get('reading_time', 0)
+
+        session.current_position = new_position
         if reading_time:
             session.total_reading_time += reading_time
         session.save(update_fields=['current_position', 'total_reading_time', 'last_read_at'])
+
+        # Log daily reading stats
+        today = timezone.now().date()
+        DailyReadingLog.objects.update_or_create(
+            user=request.user, document_id=doc_id, date=today,
+            defaults={},
+        )
+        DailyReadingLog.objects.filter(
+            user=request.user, document_id=doc_id, date=today,
+        ).update(
+            reading_time=F('reading_time') + reading_time,
+            words_read=F('words_read') + words_advanced,
+            ending_wpm=session.wpm,
+            sessions_count=F('sessions_count') + 1,
+        )
+
+        # Check completion
+        if (new_position >= session.document.total_words - session.chunk_size
+                and not session.completed_at):
+            session.completed_at = timezone.now()
+            session.save(update_fields=['completed_at'])
 
         return Response({'position': session.current_position})
 

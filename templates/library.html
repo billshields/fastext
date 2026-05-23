@@ -1,12 +1,15 @@
 {% extends "base.html" %}
-{% block title %}SpeedReader - Library{% endblock %}
+{% block title %}GottaWordFast - Library{% endblock %}
 
 {% block body %}
 <div class="library-container">
     <header class="library-header">
         <h1>My Library</h1>
         <div class="header-actions">
+            <button id="btn-paste" class="btn btn-primary">Paste Text</button>
             <button id="btn-upload" class="btn btn-primary">Upload Book</button>
+            <button class="btn btn-secondary" onclick="window.location.href='/stats/'">Stats</button>
+            <div id="theme-switcher" class="theme-switcher"></div>
             <button id="btn-logout" class="btn btn-secondary">Logout</button>
         </div>
     </header>
@@ -37,12 +40,33 @@
         </select>
     </div>
 
+    <div id="bulk-toolbar" class="bulk-toolbar" hidden>
+        <input type="checkbox" id="select-all-cb" class="doc-select-cb">
+        <span class="bulk-count" id="bulk-count">0 selected</span>
+        <button id="btn-bulk-delete" class="btn btn-danger btn-sm">Delete Selected</button>
+    </div>
+
     <div id="documents-list" class="documents-grid">
         <p class="loading-msg">Loading your library...</p>
     </div>
 
     <div id="empty-state" class="empty-state" hidden>
         <p>No books yet. Upload a PDF or EPUB to get started.</p>
+    </div>
+</div>
+
+<div id="paste-modal" class="help-overlay" hidden>
+    <div class="help-overlay-backdrop" id="paste-backdrop"></div>
+    <div class="help-overlay-content" style="max-width:520px;min-width:400px;">
+        <h3>Paste Text</h3>
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+            <input type="text" id="paste-title" class="toolbar-input" placeholder="Title" maxlength="500">
+            <textarea id="paste-text" rows="12" placeholder="Paste or type your text here..."></textarea>
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+                <button id="paste-cancel" class="btn btn-secondary">Cancel</button>
+                <button id="paste-submit" class="btn btn-primary">Submit</button>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -52,6 +76,8 @@
     if (!api.isAuthenticated()) {
         window.location.href = '/';
     }
+
+    gwfTheme.render(document.getElementById('theme-switcher'));
 
     const docsList = document.getElementById('documents-list');
     const emptyState = document.getElementById('empty-state');
@@ -82,6 +108,7 @@
                 emptyState.querySelector('p').textContent = hasActiveFilters()
                     ? 'No documents match your search or filters.'
                     : 'No books yet. Upload a PDF or EPUB to get started.';
+                updateBulkToolbar();
                 return;
             }
             emptyState.hidden = true;
@@ -102,9 +129,10 @@
                     : '';
 
                 card.innerHTML = `
+                    <input type="checkbox" class="doc-select-cb" data-id="${doc.id}">
                     <div class="doc-info">
                         <h3 class="doc-title">${doc.title}</h3>
-                        <span class="doc-meta">${doc.file_type.toUpperCase()} &middot; ${formatSize(doc.file_size)}</span>
+                        <span class="doc-meta">${doc.file_type ? doc.file_type.toUpperCase() : 'TEXT'} &middot; ${formatSize(doc.file_size)}</span>
                         ${statusBadge}
                         ${progressBar}
                     </div>
@@ -115,6 +143,7 @@
                 `;
                 docsList.appendChild(card);
             }
+            updateBulkToolbar();
         } catch (err) {
             docsList.innerHTML = '<p class="error-msg">Failed to load documents.</p>';
         }
@@ -183,6 +212,91 @@
     });
     sortSelect.addEventListener('change', loadDocuments);
     statusSelect.addEventListener('change', loadDocuments);
+
+    // Paste-to-Read modal
+    const pasteModal = document.getElementById('paste-modal');
+    const pasteTitle = document.getElementById('paste-title');
+    const pasteText = document.getElementById('paste-text');
+
+    function openPasteModal() {
+        pasteTitle.value = '';
+        pasteText.value = '';
+        pasteModal.hidden = false;
+    }
+
+    function closePasteModal() {
+        pasteModal.hidden = true;
+    }
+
+    document.getElementById('btn-paste').addEventListener('click', openPasteModal);
+    document.getElementById('paste-cancel').addEventListener('click', closePasteModal);
+    document.getElementById('paste-backdrop').addEventListener('click', closePasteModal);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !pasteModal.hidden) closePasteModal();
+    });
+
+    document.getElementById('paste-submit').addEventListener('click', async () => {
+        const title = pasteTitle.value.trim();
+        const text = pasteText.value.trim();
+        if (!title || !text) {
+            alert('Please provide both a title and text.');
+            return;
+        }
+        try {
+            await api.post('/api/documents/paste/', { title, text });
+            closePasteModal();
+            loadDocuments();
+        } catch (err) {
+            alert('Failed to create document: ' + (err.message || 'Unknown error'));
+        }
+    });
+
+    // Bulk delete
+    const bulkToolbar = document.getElementById('bulk-toolbar');
+    const selectAllCb = document.getElementById('select-all-cb');
+    const bulkCount = document.getElementById('bulk-count');
+
+    function getSelectedIds() {
+        return Array.from(docsList.querySelectorAll('.doc-select-cb:checked')).map(cb => Number(cb.dataset.id));
+    }
+
+    function updateBulkToolbar() {
+        const all = docsList.querySelectorAll('.doc-select-cb');
+        const checked = docsList.querySelectorAll('.doc-select-cb:checked');
+        if (all.length === 0) {
+            bulkToolbar.hidden = true;
+            return;
+        }
+        bulkToolbar.hidden = false;
+        bulkCount.textContent = checked.length + ' selected';
+        selectAllCb.checked = checked.length === all.length && all.length > 0;
+        selectAllCb.indeterminate = checked.length > 0 && checked.length < all.length;
+    }
+
+    docsList.addEventListener('change', (e) => {
+        if (e.target.classList.contains('doc-select-cb')) {
+            updateBulkToolbar();
+        }
+    });
+
+    selectAllCb.addEventListener('change', () => {
+        const cbs = docsList.querySelectorAll('.doc-select-cb');
+        cbs.forEach(cb => cb.checked = selectAllCb.checked);
+        updateBulkToolbar();
+    });
+
+    document.getElementById('btn-bulk-delete').addEventListener('click', async () => {
+        const ids = getSelectedIds();
+        if (ids.length === 0) return;
+        if (!confirm(`Delete ${ids.length} document(s)?`)) return;
+        try {
+            await api.post('/api/documents/bulk-delete/', { ids });
+            loadDocuments();
+        } catch (err) {
+            alert('Failed to delete documents: ' + (err.message || 'Unknown error'));
+        }
+    });
 
     loadDocuments();
     // Poll for processing documents

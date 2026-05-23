@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start all SpeedReader services
+# Start all GottaWordFast services
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"

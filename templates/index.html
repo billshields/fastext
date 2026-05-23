@@ -1,10 +1,11 @@
 {% extends "base.html" %}
-{% block title %}SpeedReader - Login{% endblock %}
+{% block title %}GottaWordFast - Login{% endblock %}
 
 {% block body %}
 <div class="auth-container">
-    <h1 class="auth-title">SpeedReader</h1>
+    <h1 class="auth-title">GottaWordFast</h1>
     <p class="auth-subtitle">Read faster. Retain more.</p>
+    <div id="theme-switcher" class="theme-switcher" style="margin-bottom:1.5rem;"></div>
 
     <div id="login-form" class="auth-form">
         <h2>Login</h2>
@@ -32,6 +33,8 @@
     if (api.isAuthenticated()) {
         window.location.href = '/library/';
     }
+
+    gwfTheme.render(document.getElementById('theme-switcher'));
 
     document.getElementById('show-register').addEventListener('click', (e) => {
         e.preventDefault();

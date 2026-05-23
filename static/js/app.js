@@ -314,12 +314,17 @@
         });
     })();
 
+    const debouncedWpmPrefSave = debounce((wpm) => {
+        api.patch('/api/auth/preferences/', { default_wpm: wpm }).catch(() => {});
+    }, 300);
+
     elements.wpmSlider.addEventListener('input', (e) => {
         const wpm = parseInt(e.target.value);
         updateSpeedLabel(wpm);
         if (engine) engine.wpm = wpm;
         if (ttsController) ttsController.setRate(wpm);
         api.patch(`/api/documents/${docId}/session/`, { wpm }).catch(() => {});
+        debouncedWpmPrefSave(wpm);
     });
 
     function updateSpeedLabel(wpm) {
@@ -405,6 +410,7 @@
 
     function saveAndApplyPrefs() {
         const prefs = {
+            default_wpm: parseInt(elements.wpmSlider.value),
             background_color: document.getElementById('set-bg-color').value,
             text_color: document.getElementById('set-text-color').value,
             ui_color: document.getElementById('set-ui-color').value,
@@ -468,12 +474,12 @@
     function dismissHelpHint() {
         if (elements.helpHint) {
             elements.helpHint.classList.add('hidden');
-            localStorage.setItem('speedreader_help_seen', '1');
+            localStorage.setItem('gottawordfast_help_seen', '1');
         }
     }
 
     function initHelpHint() {
-        if (localStorage.getItem('speedreader_help_seen')) {
+        if (localStorage.getItem('gottawordfast_help_seen')) {
             if (elements.helpHint) elements.helpHint.classList.add('hidden');
         }
     }

@@ -1,13 +1,14 @@
 from django.db import transaction
 from django.db.models import OuterRef, Subquery, Value, Case, When, F, FloatField
 from django.db.models.functions import Cast
+from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.reading.models import ReadingSession
 from .models import Document
-from .serializers import DocumentSerializer, DocumentUploadSerializer
+from .serializers import DocumentSerializer, DocumentUploadSerializer, DocumentPasteSerializer
 from .tasks import process_document
 
 
@@ -163,6 +164,62 @@ class DocumentTextView(APIView):
             doc.save(update_fields=['total_words'])
 
             # Reset any reading sessions to the beginning
-            doc.sessions.update(current_position=0)
+            doc.sessions.update(current_position=0, completed_at=None)
 
         return Response({'id': doc.id, 'total_words': doc.total_words})
+
+
+class DocumentPasteView(APIView):
+    def post(self, request):
+        from .models import DocumentChunk
+        import re
+
+        serializer = DocumentPasteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        title = serializer.validated_data['title']
+        text = serializer.validated_data['text']
+        words = text.split()
+
+        with transaction.atomic():
+            doc = Document.objects.create(
+                user=request.user,
+                title=title,
+                file_type='text',
+                file_size=len(text.encode('utf-8')),
+                status=Document.Status.COMPLETED,
+                total_words=len(words),
+                processed_at=timezone.now(),
+            )
+
+            chunks = []
+            for i, word in enumerate(words):
+                sentence_end = bool(re.search(r'[.!?]["\')\]]?$', word))
+                chunks.append(DocumentChunk(
+                    document=doc,
+                    position=i,
+                    word=word,
+                    chapter_index=0,
+                    paragraph_index=0,
+                    sentence_end=sentence_end,
+                ))
+                if len(chunks) >= 5000:
+                    DocumentChunk.objects.bulk_create(chunks)
+                    chunks = []
+
+            if chunks:
+                DocumentChunk.objects.bulk_create(chunks)
+
+        return Response(
+            DocumentSerializer(doc).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class DocumentBulkDeleteView(APIView):
+    def post(self, request):
+        ids = request.data.get('ids', [])
+        if not isinstance(ids, list) or not ids:
+            return Response({'detail': 'Provide a non-empty list of document IDs.'}, status=status.HTTP_400_BAD_REQUEST)
+        deleted_count, _ = Document.objects.filter(id__in=ids, user=request.user).delete()
+        return Response({'deleted': deleted_count})

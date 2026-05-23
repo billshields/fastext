@@ -16,6 +16,23 @@
         <div class="rsvp-focus-line"></div>
     </div>
 
+    <div id="progress-scrubber" class="progress-scrubber">
+        <div class="scrubber-track" id="scrubber-track">
+            <div class="scrubber-fill" id="scrubber-fill"></div>
+            <div class="scrubber-handle" id="scrubber-handle"></div>
+            <div class="scrubber-chapters" id="scrubber-chapters"></div>
+        </div>
+        <div class="scrubber-labels">
+            <span id="scrubber-position">0</span>
+            <div id="chapter-nav" class="chapter-nav" hidden>
+                <button id="btn-prev-chapter" class="btn-chapter" title="Previous chapter">&lsaquo;</button>
+                <span id="chapter-label" class="chapter-label">Chapter 1</span>
+                <button id="btn-next-chapter" class="btn-chapter" title="Next chapter">&rsaquo;</button>
+            </div>
+            <span id="scrubber-total">0</span>
+        </div>
+    </div>
+
     <div id="reader-controls" class="reader-controls">
         <button id="btn-rewind" class="btn btn-control" title="Rewind 10 words">&laquo;</button>
         <button id="btn-play-pause" class="btn btn-control btn-play">&#9654;</button>
@@ -122,6 +139,14 @@
                 <div class="shortcut-row">
                     <kbd>&darr;</kbd>
                     <span>Slow down (-25 WPM)</span>
+                </div>
+                <div class="shortcut-row">
+                    <kbd>[</kbd>
+                    <span>Previous chapter</span>
+                </div>
+                <div class="shortcut-row">
+                    <kbd>]</kbd>
+                    <span>Next chapter</span>
                 </div>
                 <div class="shortcut-row">
                     <kbd>?</kbd>

@@ -21,6 +21,9 @@
     let ttsController = null;
     let ttsEnabled = false;
 
+    let chapters = [];
+    let currentChapterIdx = 0;
+
     const elements = {
         before: document.getElementById('rsvp-before'),
         pivot: document.getElementById('rsvp-pivot'),
@@ -33,6 +36,17 @@
         settingsPanel: document.getElementById('settings-panel'),
         helpOverlay: document.getElementById('help-overlay'),
         helpHint: document.getElementById('help-hint'),
+        scrubber: document.getElementById('progress-scrubber'),
+        scrubberTrack: document.getElementById('scrubber-track'),
+        scrubberFill: document.getElementById('scrubber-fill'),
+        scrubberHandle: document.getElementById('scrubber-handle'),
+        scrubberChapters: document.getElementById('scrubber-chapters'),
+        scrubberPosition: document.getElementById('scrubber-position'),
+        scrubberTotal: document.getElementById('scrubber-total'),
+        chapterNav: document.getElementById('chapter-nav'),
+        chapterLabel: document.getElementById('chapter-label'),
+        btnPrevChapter: document.getElementById('btn-prev-chapter'),
+        btnNextChapter: document.getElementById('btn-next-chapter'),
     };
 
     // Initialize reader
@@ -79,9 +93,11 @@
                 });
             }
 
+            elements.scrubberTotal.textContent = session.total_words.toLocaleString();
             updateProgress();
             await loadPreferences();
             initHelpHint();
+            loadChapters();
         } catch (err) {
             elements.before.textContent = '';
             elements.pivot.textContent = 'Error loading document';
@@ -157,10 +173,13 @@
 
     function updateProgress() {
         if (!engine) return;
-        const pct = engine.totalWords > 0
-            ? Math.round((engine.currentPos / engine.totalWords) * 100)
-            : 0;
+        const ratio = engine.totalWords > 0 ? engine.currentPos / engine.totalWords : 0;
+        const pct = Math.round(ratio * 100);
         elements.progress.textContent = pct + '%';
+        elements.scrubberFill.style.width = (ratio * 100) + '%';
+        elements.scrubberHandle.style.left = (ratio * 100) + '%';
+        elements.scrubberPosition.textContent = engine.currentPos.toLocaleString();
+        updateCurrentChapter();
     }
 
     function onFinished() {
@@ -236,6 +255,120 @@
             // Silent fail, will retry
         }
     }
+
+    // ======= Chapters =======
+    async function loadChapters() {
+        try {
+            const data = await api.get(`/api/documents/${docId}/chapters/`);
+            chapters = data.chapters || [];
+            if (chapters.length > 0) {
+                elements.chapterNav.hidden = false;
+                renderChapterMarkers();
+                updateCurrentChapter();
+            }
+        } catch (err) {
+            // No chapters — that's fine
+        }
+    }
+
+    function renderChapterMarkers() {
+        elements.scrubberChapters.innerHTML = '';
+        if (!engine || engine.totalWords === 0) return;
+        chapters.forEach(ch => {
+            const pct = (ch.start / engine.totalWords) * 100;
+            const marker = document.createElement('div');
+            marker.className = 'chapter-marker';
+            marker.style.left = pct + '%';
+            marker.title = ch.label;
+            elements.scrubberChapters.appendChild(marker);
+        });
+    }
+
+    function updateCurrentChapter() {
+        if (chapters.length === 0 || !engine) return;
+        let idx = 0;
+        for (let i = chapters.length - 1; i >= 0; i--) {
+            if (engine.currentPos >= chapters[i].start) {
+                idx = i;
+                break;
+            }
+        }
+        currentChapterIdx = idx;
+        elements.chapterLabel.textContent = chapters[idx].label;
+        elements.btnPrevChapter.disabled = idx === 0;
+        elements.btnNextChapter.disabled = idx === chapters.length - 1;
+    }
+
+    function jumpToChapter(idx) {
+        if (idx < 0 || idx >= chapters.length || !engine) return;
+        const wasPlaying = isPlaying();
+        if (wasPlaying) elements.playPause.click();
+        jumpToPosition(chapters[idx].start);
+        if (wasPlaying) elements.playPause.click();
+    }
+
+    elements.btnPrevChapter.addEventListener('click', () => jumpToChapter(currentChapterIdx - 1));
+    elements.btnNextChapter.addEventListener('click', () => jumpToChapter(currentChapterIdx + 1));
+
+    // ======= Scrubber drag =======
+    function jumpToPosition(pos) {
+        pos = Math.max(0, Math.min(engine.totalWords - 1, pos));
+
+        if (!engine.words.has(pos)) {
+            const fetchStart = Math.max(0, pos - 250);
+            api.get(`/api/documents/${docId}/words/?start=${fetchStart}&count=500`).then(data => {
+                engine.loadWords(data.words);
+                engine.setPosition(pos);
+                onPositionChange(pos);
+            });
+        } else {
+            engine.setPosition(pos);
+            onPositionChange(pos);
+        }
+    }
+
+    (function initScrubber() {
+        const track = elements.scrubberTrack;
+        let dragging = false;
+
+        function posFromEvent(e) {
+            const rect = track.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            return Math.round(ratio * (engine ? engine.totalWords - 1 : 0));
+        }
+
+        track.addEventListener('pointerdown', (e) => {
+            if (!engine) return;
+            dragging = true;
+            elements.scrubber.classList.add('dragging');
+            track.setPointerCapture(e.pointerId);
+
+            const wasPlaying = isPlaying();
+            if (wasPlaying) elements.playPause.click();
+            track.dataset.wasPlaying = wasPlaying;
+
+            const pos = posFromEvent(e);
+            jumpToPosition(pos);
+            e.preventDefault();
+        });
+
+        track.addEventListener('pointermove', (e) => {
+            if (!dragging || !engine) return;
+            const pos = posFromEvent(e);
+            jumpToPosition(pos);
+        });
+
+        track.addEventListener('pointerup', (e) => {
+            if (!dragging) return;
+            dragging = false;
+            elements.scrubber.classList.remove('dragging');
+
+            if (track.dataset.wasPlaying === 'true') {
+                elements.playPause.click();
+            }
+            delete track.dataset.wasPlaying;
+        });
+    })();
 
     // Controls
     elements.playPause.addEventListener('click', () => {
@@ -536,6 +669,15 @@
                 elements.wpmSlider.value = Math.max(100, parseInt(elements.wpmSlider.value) - 25);
                 elements.wpmSlider.dispatchEvent(new Event('input'));
                 break;
+        }
+
+        if (e.key === '[' && chapters.length > 0) {
+            e.preventDefault();
+            jumpToChapter(currentChapterIdx - 1);
+        }
+        if (e.key === ']' && chapters.length > 0) {
+            e.preventDefault();
+            jumpToChapter(currentChapterIdx + 1);
         }
     });
 

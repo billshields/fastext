@@ -418,6 +418,125 @@ body {
     display: block;
 }
 
+/* ======= Progress scrubber ======= */
+.progress-scrubber {
+    padding: 0.5rem 1.5rem 0.25rem;
+    background: rgba(0, 0, 0, 0.3);
+    user-select: none;
+}
+
+.scrubber-track {
+    position: relative;
+    height: 8px;
+    background: var(--secondary-bg);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.scrubber-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    background: var(--accent-color);
+    border-radius: 4px;
+    pointer-events: none;
+    transition: width 0.1s linear;
+}
+
+.scrubber-handle {
+    position: absolute;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    background: var(--text-color);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.scrubber-track:hover .scrubber-handle,
+.progress-scrubber.dragging .scrubber-handle {
+    opacity: 1;
+}
+
+.scrubber-chapters {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.chapter-marker {
+    position: absolute;
+    top: -2px;
+    width: 2px;
+    height: 12px;
+    background: var(--text-color);
+    opacity: 0.4;
+    border-radius: 1px;
+    transform: translateX(-50%);
+}
+
+.chapter-marker:first-child {
+    display: none;
+}
+
+.scrubber-labels {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--muted-color);
+    margin-top: 0.25rem;
+    min-height: 1.5rem;
+}
+
+/* ======= Chapter navigation ======= */
+.chapter-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.chapter-nav[hidden] {
+    display: none;
+}
+
+.btn-chapter {
+    background: none;
+    border: 1px solid var(--secondary-bg);
+    color: var(--text-color);
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.btn-chapter:hover {
+    background: var(--secondary-bg);
+}
+
+.btn-chapter:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.chapter-label {
+    font-size: 0.8rem;
+    color: var(--subtle-color);
+    min-width: 80px;
+    text-align: center;
+}
+
 /* Controls */
 .reader-controls {
     display: flex;

@@ -1,4 +1,4 @@
-from django.db.models import F
+from django.db.models import F, Min
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
@@ -116,6 +116,47 @@ class ProgressView(APIView):
             session.save(update_fields=['completed_at'])
 
         return Response({'position': session.current_position})
+
+
+class ChaptersView(APIView):
+    """Return chapter boundaries for a document."""
+
+    def get(self, request, doc_id):
+        try:
+            doc = Document.objects.get(pk=doc_id, user=request.user)
+        except Document.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        chapters = list(
+            DocumentChunk.objects.filter(document=doc)
+            .values('chapter_index')
+            .annotate(start_position=Min('position'))
+            .order_by('chapter_index')
+        )
+
+        if len(chapters) <= 1:
+            return Response({'chapters': []})
+
+        # Get the first word of each chapter as a label preview
+        start_positions = [c['start_position'] for c in chapters]
+        first_words = {
+            chunk['position']: chunk['word']
+            for chunk in DocumentChunk.objects.filter(
+                document=doc, position__in=start_positions
+            ).values('position', 'word')
+        }
+
+        return Response({
+            'chapters': [
+                {
+                    'index': c['chapter_index'],
+                    'start': c['start_position'],
+                    'label': f"Chapter {c['chapter_index'] + 1}",
+                    'first_word': first_words.get(c['start_position'], ''),
+                }
+                for c in chapters
+            ],
+        })
 
 
 class SessionUpdateView(APIView):

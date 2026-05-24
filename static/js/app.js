@@ -47,6 +47,7 @@
         chapterLabel: document.getElementById('chapter-label'),
         btnPrevChapter: document.getElementById('btn-prev-chapter'),
         btnNextChapter: document.getElementById('btn-next-chapter'),
+        timeRemaining: document.getElementById('time-remaining'),
     };
 
     // Initialize reader
@@ -180,6 +181,30 @@
         elements.scrubberHandle.style.left = (ratio * 100) + '%';
         elements.scrubberPosition.textContent = engine.currentPos.toLocaleString();
         updateCurrentChapter();
+        updateTimeRemaining();
+    }
+
+    function updateTimeRemaining() {
+        if (!engine || !elements.timeRemaining) return;
+        const wordsLeft = Math.max(0, engine.totalWords - engine.currentPos);
+        if (wordsLeft === 0) {
+            elements.timeRemaining.textContent = '0 min remaining';
+            return;
+        }
+        let effectiveWpm = engine.wpm;
+        if (ttsEnabled) {
+            effectiveWpm = Math.min(effectiveWpm, 640);
+        }
+        const minutesLeft = wordsLeft / effectiveWpm;
+        if (minutesLeft < 1) {
+            elements.timeRemaining.textContent = '<1 min remaining';
+        } else if (minutesLeft < 60) {
+            elements.timeRemaining.textContent = Math.round(minutesLeft) + ' min remaining';
+        } else {
+            const hrs = Math.floor(minutesLeft / 60);
+            const mins = Math.round(minutesLeft % 60);
+            elements.timeRemaining.textContent = hrs + 'h ' + mins + 'm remaining';
+        }
     }
 
     function onFinished() {
@@ -453,8 +478,8 @@
 
     elements.wpmSlider.addEventListener('input', (e) => {
         const wpm = parseInt(e.target.value);
-        updateSpeedLabel(wpm);
         if (engine) engine.wpm = wpm;
+        updateSpeedLabel(wpm);
         if (ttsController) ttsController.setRate(wpm);
         api.patch(`/api/documents/${docId}/session/`, { wpm }).catch(() => {});
         debouncedWpmPrefSave(wpm);
@@ -466,7 +491,43 @@
         if (ttsCap) {
             ttsCap.hidden = !(ttsEnabled && wpm > 700);
         }
+        updateTimeRemaining();
     }
+
+    // Click-to-edit WPM label
+    elements.wpmLabel.addEventListener('click', () => {
+        const currentWpm = parseInt(elements.wpmSlider.value);
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.className = 'wpm-edit-input';
+        input.min = elements.wpmSlider.min;
+        input.max = elements.wpmSlider.max;
+        input.step = elements.wpmSlider.step;
+        input.value = currentWpm;
+        elements.wpmLabel.hidden = true;
+        elements.wpmLabel.parentNode.insertBefore(input, elements.wpmLabel);
+        input.focus();
+        input.select();
+
+        function commit() {
+            const min = +elements.wpmSlider.min;
+            const max = +elements.wpmSlider.max;
+            const step = +elements.wpmSlider.step;
+            let val = parseInt(input.value) || currentWpm;
+            val = Math.round(val / step) * step;
+            val = Math.max(min, Math.min(max, val));
+            elements.wpmSlider.value = val;
+            elements.wpmSlider.dispatchEvent(new Event('input'));
+            input.remove();
+            elements.wpmLabel.hidden = false;
+        }
+
+        input.addEventListener('blur', commit);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+            if (e.key === 'Escape') { input.value = currentWpm; input.blur(); }
+        });
+    });
 
     // Settings panel
     document.getElementById('btn-settings').addEventListener('click', () => {

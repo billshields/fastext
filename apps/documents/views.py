@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 
 from apps.reading.models import ReadingSession
 from .models import Document
-from .serializers import DocumentSerializer, DocumentUploadSerializer, DocumentPasteSerializer
+from .serializers import DocumentSerializer, DocumentUploadSerializer, DocumentPasteSerializer, DocumentURLSerializer
 from .tasks import process_document
 
 
@@ -202,6 +202,97 @@ class DocumentPasteView(APIView):
                     chapter_index=0,
                     paragraph_index=0,
                     sentence_end=sentence_end,
+                ))
+                if len(chunks) >= 5000:
+                    DocumentChunk.objects.bulk_create(chunks)
+                    chunks = []
+
+            if chunks:
+                DocumentChunk.objects.bulk_create(chunks)
+
+        return Response(
+            DocumentSerializer(doc).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class DocumentURLView(APIView):
+    def post(self, request):
+        import re
+        import trafilatura
+        from .models import DocumentChunk
+
+        serializer = DocumentURLSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        url = serializer.validated_data['url']
+        user_title = serializer.validated_data.get('title', '').strip()
+
+        import cloudscraper
+
+        try:
+            scraper = cloudscraper.create_scraper()
+            resp = scraper.get(url, timeout=20)
+            resp.raise_for_status()
+            html = resp.text
+        except Exception as e:
+            return Response(
+                {'detail': f'Could not fetch the URL: {e}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        text = trafilatura.extract(
+            html,
+            include_comments=False,
+            include_tables=True,
+            deduplicate=True,
+        )
+        if not text or len(text.strip()) < 10:
+            return Response(
+                {'detail': 'Could not extract readable content from this URL. The site may require JavaScript or block automated access.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not user_title:
+            metadata = trafilatura.extract_metadata(html)
+            user_title = metadata.title if metadata and metadata.title else url.split('/')[-1] or 'Imported Article'
+
+        paragraphs = [p.strip() for p in text.split('\n') if p.strip()]
+        words_with_meta = []
+        para_idx = 0
+        for paragraph in paragraphs:
+            for word in paragraph.split():
+                sentence_end = bool(re.search(r'[.!?]["\')\]]?$', word))
+                words_with_meta.append((word, para_idx, sentence_end))
+            para_idx += 1
+
+        if not words_with_meta:
+            return Response(
+                {'detail': 'No readable text found at this URL.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            doc = Document.objects.create(
+                user=request.user,
+                title=user_title,
+                original_filename=url,
+                file_type='url',
+                file_size=len(text.encode('utf-8')),
+                status=Document.Status.COMPLETED,
+                total_words=len(words_with_meta),
+                processed_at=timezone.now(),
+            )
+
+            chunks = []
+            for i, (word, para, se) in enumerate(words_with_meta):
+                chunks.append(DocumentChunk(
+                    document=doc,
+                    position=i,
+                    word=word,
+                    chapter_index=0,
+                    paragraph_index=para,
+                    sentence_end=se,
                 ))
                 if len(chunks) >= 5000:
                     DocumentChunk.objects.bulk_create(chunks)

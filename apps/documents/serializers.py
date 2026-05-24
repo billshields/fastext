@@ -21,6 +21,11 @@ class DocumentPasteSerializer(serializers.Serializer):
     text = serializers.CharField(min_length=1, max_length=5_000_000)
 
 
+class DocumentURLSerializer(serializers.Serializer):
+    url = serializers.URLField()
+    title = serializers.CharField(max_length=500, required=False, allow_blank=True)
+
+
 class DocumentUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
     title = serializers.CharField(max_length=500, required=False)

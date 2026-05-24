@@ -253,12 +253,17 @@ body {
 
 .doc-card {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 1rem;
     background: var(--card-bg);
     padding: 1.25rem;
     border-radius: 8px;
     border: 1px solid var(--card-border);
+}
+
+.doc-info {
+    flex: 1;
+    min-width: 0;
 }
 
 .doc-title {
@@ -353,7 +358,7 @@ body {
     opacity: 1;
 }
 
-.doc-title {
+.reader-topbar .doc-title {
     font-size: 0.9rem;
     opacity: 0.7;
     overflow: hidden;
@@ -537,6 +542,16 @@ body {
     text-align: center;
 }
 
+/* Time remaining */
+.time-remaining {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--muted-color);
+    padding: 0.25rem 0;
+    background: rgba(0, 0, 0, 0.3);
+    min-height: 1.5rem;
+}
+
 /* Controls */
 .reader-controls {
     display: flex;
@@ -589,6 +604,34 @@ body {
 #wpm-label {
     font-size: 0.9rem;
     min-width: 80px;
+    cursor: pointer;
+}
+
+#wpm-label:hover {
+    text-decoration: underline;
+    text-decoration-style: dotted;
+}
+
+.wpm-edit-input {
+    width: 72px;
+    padding: 0.2rem 0.4rem;
+    background: var(--input-bg);
+    border: 1px solid var(--accent-color);
+    border-radius: 4px;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    text-align: center;
+    outline: none;
+}
+
+.wpm-edit-input::-webkit-inner-spin-button,
+.wpm-edit-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.wpm-edit-input {
+    -moz-appearance: textfield;
 }
 
 .tts-cap-msg {

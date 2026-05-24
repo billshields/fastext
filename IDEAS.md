@@ -6,12 +6,14 @@
 ## Features
 
 ### Content Input
-- URL import — paste a URL and extract article text (readability-style)
+- ~~URL import — paste a URL and extract article text (readability-style)~~ ✅
 - Support more file types (txt, docx, html)
+- URL import: batch import — paste multiple URLs or a table of contents page and import all linked articles
+- URL import: Cloudflare fallback — some sites block server-side fetching; option to use a headless browser (Playwright) for tougher sites
 
 ### Reader Experience
-- Progress scrubber — click/drag bar to jump to any position in the document
-- Chapter navigation — jump between chapters if the document has them (chapter_index is already stored)
+- ~~Progress scrubber — click/drag bar to jump to any position in the document~~ ✅
+- ~~Chapter navigation — jump between chapters if the document has them~~ ✅ (buttons, scrubber markers, [ ] keyboard shortcuts)
 - Sentence context preview — show the surrounding sentence below the RSVP display
 - Comprehension check — periodic quiz/recall prompts after sections
 - Dark/light theme presets instead of individual color pickers

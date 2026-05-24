@@ -7,6 +7,7 @@
         <h1>My Library</h1>
         <div class="header-actions">
             <button id="btn-paste" class="btn btn-primary">Paste Text</button>
+            <button id="btn-url" class="btn btn-primary">Import URL</button>
             <button id="btn-upload" class="btn btn-primary">Upload Book</button>
             <button class="btn btn-secondary" onclick="window.location.href='/stats/'">Stats</button>
             <div id="theme-switcher" class="theme-switcher"></div>
@@ -69,6 +70,23 @@
         </div>
     </div>
 </div>
+<div id="url-modal" class="help-overlay" hidden>
+    <div class="help-overlay-backdrop" id="url-backdrop"></div>
+    <div class="help-overlay-content" style="max-width:520px;min-width:400px;">
+        <h3>Import from URL</h3>
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+            <input type="text" id="url-input" class="toolbar-input" placeholder="https://example.com/article" autocomplete="off">
+            <input type="text" id="url-title" class="toolbar-input" placeholder="Title (optional — extracted from page if blank)" maxlength="500">
+            <p id="url-error" class="error-msg" hidden></p>
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;align-items:center;">
+                <span id="url-loading" class="doc-meta" hidden>Fetching article...</span>
+                <button id="url-cancel" class="btn btn-secondary">Cancel</button>
+                <button id="url-submit" class="btn btn-primary">Import</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}
@@ -232,8 +250,60 @@
     document.getElementById('paste-cancel').addEventListener('click', closePasteModal);
     document.getElementById('paste-backdrop').addEventListener('click', closePasteModal);
 
+    // URL import modal
+    const urlModal = document.getElementById('url-modal');
+    const urlInput = document.getElementById('url-input');
+    const urlTitle = document.getElementById('url-title');
+    const urlError = document.getElementById('url-error');
+    const urlLoading = document.getElementById('url-loading');
+
+    function openUrlModal() {
+        urlInput.value = '';
+        urlTitle.value = '';
+        urlError.hidden = true;
+        urlLoading.hidden = true;
+        document.getElementById('url-submit').disabled = false;
+        urlModal.hidden = false;
+        urlInput.focus();
+    }
+
+    function closeUrlModal() {
+        urlModal.hidden = true;
+    }
+
+    document.getElementById('btn-url').addEventListener('click', openUrlModal);
+    document.getElementById('url-cancel').addEventListener('click', closeUrlModal);
+    document.getElementById('url-backdrop').addEventListener('click', closeUrlModal);
+
+    document.getElementById('url-submit').addEventListener('click', async () => {
+        const url = urlInput.value.trim();
+        if (!url) {
+            urlError.textContent = 'Please enter a URL.';
+            urlError.hidden = false;
+            return;
+        }
+        urlError.hidden = true;
+        urlLoading.hidden = false;
+        document.getElementById('url-submit').disabled = true;
+        try {
+            await api.post('/api/documents/url/', {
+                url: url,
+                title: urlTitle.value.trim(),
+            });
+            closeUrlModal();
+            loadDocuments();
+        } catch (err) {
+            urlError.textContent = err.message || 'Failed to import URL.';
+            urlError.hidden = false;
+        } finally {
+            urlLoading.hidden = true;
+            document.getElementById('url-submit').disabled = false;
+        }
+    });
+
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && !pasteModal.hidden) closePasteModal();
+        if (e.key === 'Escape' && !urlModal.hidden) closeUrlModal();
     });
 
     document.getElementById('paste-submit').addEventListener('click', async () => {

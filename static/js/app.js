@@ -48,6 +48,7 @@
         btnPrevChapter: document.getElementById('btn-prev-chapter'),
         btnNextChapter: document.getElementById('btn-next-chapter'),
         timeRemaining: document.getElementById('time-remaining'),
+        fullscreen: document.getElementById('btn-fullscreen'),
     };
 
     // Initialize reader
@@ -395,6 +396,112 @@
         });
     })();
 
+    // ======= Touch: Tap to play/pause, Swipe to rewind/forward =======
+    (function initTouchGestures() {
+        const display = document.getElementById('rsvp-display');
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartTime = 0;
+
+        display.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0) return;
+            touchStartX = e.clientX;
+            touchStartY = e.clientY;
+            touchStartTime = Date.now();
+        });
+
+        display.addEventListener('pointerup', (e) => {
+            if (e.button !== 0) return;
+            if (!touchStartTime) return;
+
+            const dx = e.clientX - touchStartX;
+            const dy = e.clientY - touchStartY;
+            const elapsed = Date.now() - touchStartTime;
+            const absDx = Math.abs(dx);
+            const absDy = Math.abs(dy);
+
+            touchStartTime = 0;
+
+            if (absDx > 50 && absDx > absDy * 1.5 && elapsed < 500) {
+                if (!engine) return;
+                const wasPlaying = isPlaying();
+                if (ttsEnabled && ttsController) ttsController.stop();
+                if (dx > 0) {
+                    engine.rewind(engine.chunkSize * 10);
+                } else {
+                    engine.forward(engine.chunkSize * 10);
+                }
+                if (wasPlaying && ttsEnabled && ttsController) speakFromPosition(engine.currentPos);
+                return;
+            }
+
+            if (absDx < 15 && absDy < 15 && elapsed < 300) {
+                if (isFullscreen() && document.getElementById('reader-container').classList.contains('fullscreen-hide')) {
+                    showFullscreenChrome();
+                } else {
+                    elements.playPause.click();
+                }
+            }
+        });
+    })();
+
+    // ======= Full-screen mode =======
+    let fullscreenChromeTimer = null;
+
+    function isFullscreen() {
+        return !!document.fullscreenElement;
+    }
+
+    function toggleFullscreen() {
+        if (isFullscreen()) {
+            document.exitFullscreen().catch(() => {});
+        } else {
+            document.documentElement.requestFullscreen().catch(() => {});
+        }
+    }
+
+    function showFullscreenChrome() {
+        const container = document.getElementById('reader-container');
+        container.classList.remove('fullscreen-hide');
+        clearTimeout(fullscreenChromeTimer);
+        fullscreenChromeTimer = setTimeout(() => {
+            if (isFullscreen()) {
+                container.classList.add('fullscreen-hide');
+            }
+        }, 3000);
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+        const container = document.getElementById('reader-container');
+        if (isFullscreen()) {
+            container.classList.add('fullscreen-active');
+            container.classList.add('fullscreen-hide');
+            elements.fullscreen.innerHTML = '&#x2716;';
+            elements.fullscreen.title = 'Exit full screen (F)';
+            showFullscreenChrome();
+        } else {
+            container.classList.remove('fullscreen-active');
+            container.classList.remove('fullscreen-hide');
+            clearTimeout(fullscreenChromeTimer);
+            elements.fullscreen.innerHTML = '&#x26F6;';
+            elements.fullscreen.title = 'Full screen (F)';
+        }
+    });
+
+    document.getElementById('reader-container').addEventListener('mousemove', () => {
+        if (isFullscreen()) showFullscreenChrome();
+    });
+
+    document.getElementById('reader-container').addEventListener('touchstart', () => {
+        if (isFullscreen()) showFullscreenChrome();
+    }, { passive: true });
+
+    elements.fullscreen.addEventListener('click', toggleFullscreen);
+
+    if (!document.documentElement.requestFullscreen) {
+        elements.fullscreen.hidden = true;
+    }
+
     // Controls
     elements.playPause.addEventListener('click', () => {
         if (!engine) return;
@@ -729,6 +836,9 @@
             case 'ArrowDown':
                 elements.wpmSlider.value = Math.max(100, parseInt(elements.wpmSlider.value) - 25);
                 elements.wpmSlider.dispatchEvent(new Event('input'));
+                break;
+            case 'KeyF':
+                toggleFullscreen();
                 break;
         }
 

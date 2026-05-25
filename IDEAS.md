@@ -20,19 +20,19 @@
 - Peripheral word preview — show the next/previous word faintly on either side
 
 ### Reading Stats
-- WPM history graph — track speed over time per document and overall
-- Reading time dashboard — daily/weekly/monthly reading time
-- Documents completed count and streak tracking
-- Words read per session summary
+- ~~WPM history graph — track speed over time per document and overall~~ ✅
+- ~~Reading time dashboard — daily/weekly/monthly reading time~~ ✅
+- ~~Documents completed count and streak tracking~~ ✅
+- ~~Words read per session summary~~ ✅
 
 ### Library Management
 - Tags / folders for organization
 
 ### Mobile Support
-- Tap to play/pause
-- Swipe left/right to rewind/forward
-- Responsive layout for small screens
-- Full-screen reading mode
+- ~~Tap to play/pause~~ ✅
+- ~~Swipe left/right to rewind/forward~~ ✅
+- ~~Responsive layout for small screens~~ ✅
+- ~~Full-screen reading mode~~ ✅
 
 ### Social / Sharing
 - Share reading speed results

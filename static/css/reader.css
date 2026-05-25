@@ -379,6 +379,7 @@ body {
     justify-content: center;
     position: relative;
     user-select: none;
+    touch-action: none;
 }
 
 .rsvp-word-container {
@@ -1172,8 +1173,186 @@ body {
 .theme-swatch[data-theme="forest"]  { background: #0f1a14; box-shadow: inset 0 0 0 3px #4a9e6e; }
 .theme-swatch[data-theme="mono"]    { background: #141414; box-shadow: inset 0 0 0 3px #4a9edd; }
 
+/* ======= Modal content (replaces inline styles) ======= */
+.paste-modal-content,
+.url-modal-content {
+    max-width: 520px;
+    min-width: 400px;
+}
+
+/* ======= Fullscreen mode ======= */
+.reader-container.fullscreen-active .rsvp-display {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
+.reader-container.fullscreen-active .reader-topbar,
+.reader-container.fullscreen-active .progress-scrubber,
+.reader-container.fullscreen-active .time-remaining,
+.reader-container.fullscreen-active .reader-controls {
+    position: relative;
+    z-index: 10;
+    transition: opacity 0.3s ease;
+}
+
+.reader-container.fullscreen-hide .reader-topbar,
+.reader-container.fullscreen-hide .progress-scrubber,
+.reader-container.fullscreen-hide .time-remaining,
+.reader-container.fullscreen-hide .reader-controls {
+    opacity: 0;
+    pointer-events: none;
+}
+
 /* ======= Responsive ======= */
 @media (max-width: 640px) {
+    /* --- Reader page --- */
+    .reader-topbar {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .reader-topbar .doc-title {
+        font-size: 0.8rem;
+        max-width: 40%;
+    }
+
+    .rsvp-word-container {
+        font-size: calc(var(--font-size) * 0.75);
+        padding: 0 0.5rem;
+        word-break: break-word;
+        white-space: normal;
+        text-align: center;
+    }
+
+    .progress-scrubber {
+        padding: 0.5rem 0.75rem 0.25rem;
+    }
+
+    .btn-chapter {
+        width: 44px;
+        height: 44px;
+        font-size: 1.3rem;
+    }
+
+    .reader-controls {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 0.75rem;
+    }
+
+    .wpm-control {
+        order: 1;
+        width: 100%;
+        justify-content: center;
+    }
+
+    #wpm-slider {
+        width: 100%;
+        flex: 1;
+        max-width: 200px;
+    }
+
+    .settings-panel {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        width: 100%;
+        max-height: 70vh;
+        overflow-y: auto;
+        border-radius: 12px 12px 0 0;
+        z-index: 150;
+    }
+
+    .help-overlay-content {
+        min-width: unset;
+        max-width: 90vw;
+        padding: 1.5rem;
+    }
+
+    /* --- Library page --- */
+    .library-container {
+        padding: 1rem;
+    }
+
+    .library-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .header-actions {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .header-actions .btn {
+        flex: 1;
+        min-width: calc(33% - 0.5rem);
+        text-align: center;
+        padding: 0.5rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .header-actions .theme-switcher {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .library-toolbar {
+        flex-direction: column;
+    }
+
+    .toolbar-input {
+        min-width: unset;
+    }
+
+    .toolbar-select {
+        min-width: unset;
+        width: 100%;
+    }
+
+    .doc-card {
+        padding: 0.75rem;
+        gap: 0.5rem;
+    }
+
+    .doc-actions {
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .doc-actions .btn {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+    }
+
+    .bulk-toolbar {
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    /* --- Stats page --- */
+    .stats-container {
+        padding: 1rem;
+    }
+
+    .stats-header {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .stats-header h1 {
+        font-size: 1.3rem;
+    }
+
+    .stat-card .stat-value {
+        font-size: 1.5rem;
+    }
+
     .stats-cards {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -1187,5 +1366,12 @@ body {
     .doc-stat-metrics {
         flex-wrap: wrap;
         gap: 0.75rem;
+    }
+
+    /* --- Modals --- */
+    .paste-modal-content,
+    .url-modal-content {
+        min-width: unset;
+        max-width: 95vw;
     }
 }

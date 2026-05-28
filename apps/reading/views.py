@@ -4,10 +4,17 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.catalog.models import CatalogChunk
 from apps.documents.models import Document, DocumentChunk
 from apps.stats.models import DailyReadingLog
 from .models import ReadingSession
 from .serializers import ReadingSessionSerializer, ProgressSerializer, SessionUpdateSerializer
+
+
+def get_chunks_queryset(doc):
+    if doc.catalog_source_id:
+        return CatalogChunk.objects.filter(source_id=doc.catalog_source_id)
+    return DocumentChunk.objects.filter(document=doc)
 
 
 class ReadView(APIView):
@@ -31,8 +38,7 @@ class ReadView(APIView):
         # Always load from position 0 up to current_position + 500
         # so rewinding after reload always works
         words = list(
-            DocumentChunk.objects.filter(
-                document=doc,
+            get_chunks_queryset(doc).filter(
                 position__lt=session.current_position + 500,
             ).values('position', 'word', 'sentence_end')
         )
@@ -56,8 +62,7 @@ class WordsView(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         words = list(
-            DocumentChunk.objects.filter(
-                document=doc,
+            get_chunks_queryset(doc).filter(
                 position__gte=start,
                 position__lt=start + count,
             ).values('position', 'word', 'sentence_end')
@@ -127,8 +132,9 @@ class ChaptersView(APIView):
         except Document.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
+        chunks_qs = get_chunks_queryset(doc)
         chapters = list(
-            DocumentChunk.objects.filter(document=doc)
+            chunks_qs
             .values('chapter_index')
             .annotate(start_position=Min('position'))
             .order_by('chapter_index')
@@ -141,8 +147,8 @@ class ChaptersView(APIView):
         start_positions = [c['start_position'] for c in chapters]
         first_words = {
             chunk['position']: chunk['word']
-            for chunk in DocumentChunk.objects.filter(
-                document=doc, position__in=start_positions
+            for chunk in chunks_qs.filter(
+                position__in=start_positions
             ).values('position', 'word')
         }
 

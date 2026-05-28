@@ -112,8 +112,16 @@ const api = (() => {
     }
 
     function beacon(url, data) {
-        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-        navigator.sendBeacon(url, blob);
+        const token = getAccessToken();
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(data),
+            keepalive: true,
+        }).catch(() => {});
     }
 
     function logout() {

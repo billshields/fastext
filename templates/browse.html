@@ -1,0 +1,415 @@
+{% extends "base.html" %}
+{% block title %}GottaWordFast - Browse{% endblock %}
+
+{% block extra_head %}
+<style>
+    .browse-toolbar {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .browse-toolbar .toolbar-input {
+        flex: 1;
+        min-width: 200px;
+    }
+    .browse-topics {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
+    }
+    .topic-chip {
+        padding: 0.35rem 0.9rem;
+        border-radius: 20px;
+        border: 1px solid var(--card-border);
+        background: var(--card-bg);
+        color: var(--subtle-color);
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .topic-chip:hover {
+        border-color: var(--accent-color);
+        color: var(--text-color);
+    }
+    .topic-chip.active {
+        background: var(--accent-color);
+        border-color: var(--accent-color);
+        color: #fff;
+    }
+    .browse-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+    }
+    .book-card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 8px;
+        padding: 1rem;
+        display: flex;
+        gap: 1rem;
+        transition: border-color 0.2s;
+    }
+    .book-card:hover {
+        border-color: var(--accent-color);
+    }
+    .book-cover {
+        width: 80px;
+        min-height: 110px;
+        border-radius: 4px;
+        object-fit: cover;
+        background: var(--secondary-bg);
+        flex-shrink: 0;
+    }
+    .book-cover-placeholder {
+        width: 80px;
+        min-height: 110px;
+        border-radius: 4px;
+        background: var(--secondary-bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted-color);
+        font-size: 0.75rem;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    .book-details {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        min-width: 0;
+    }
+    .book-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+    .book-author {
+        font-size: 0.85rem;
+        color: var(--subtle-color);
+    }
+    .book-downloads {
+        font-size: 0.75rem;
+        color: var(--faint-color);
+    }
+    .book-subjects {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        margin-top: auto;
+    }
+    .subject-tag {
+        font-size: 0.7rem;
+        background: var(--secondary-bg);
+        color: var(--muted-color);
+        padding: 0.15rem 0.5rem;
+        border-radius: 10px;
+        white-space: nowrap;
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .book-actions {
+        margin-top: 0.5rem;
+    }
+    .btn-in-library {
+        background: var(--success-color);
+        color: #fff;
+        cursor: default;
+        opacity: 0.8;
+    }
+    .btn-processing {
+        background: var(--info-color);
+        color: #fff;
+        cursor: wait;
+    }
+    .browse-pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+        align-items: center;
+    }
+    .browse-empty {
+        text-align: center;
+        color: var(--muted-color);
+        padding: 4rem 1rem;
+        font-size: 1.1rem;
+    }
+    .browse-loading {
+        text-align: center;
+        color: var(--muted-color);
+        padding: 2rem;
+    }
+    .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        color: var(--subtle-color);
+        font-size: 0.9rem;
+    }
+    .results-count {
+        color: var(--muted-color);
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="library-container">
+    <header class="library-header">
+        <h1>Browse Books</h1>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="window.location.href='/library/'">My Library</button>
+            <div id="theme-switcher" class="theme-switcher"></div>
+        </div>
+    </header>
+
+    <div class="browse-toolbar">
+        <input type="text" id="search-input" class="toolbar-input" placeholder="Search titles and authors...">
+        <select id="sort-select" class="toolbar-select">
+            <option value="popular">Most Popular</option>
+            <option value="ascending">Oldest Added</option>
+            <option value="descending">Newest Added</option>
+        </select>
+    </div>
+
+    <div class="browse-topics" id="topic-chips">
+        <button class="topic-chip active" data-topic="">All</button>
+        <button class="topic-chip" data-topic="fiction">Fiction</button>
+        <button class="topic-chip" data-topic="science fiction">Sci-Fi</button>
+        <button class="topic-chip" data-topic="adventure">Adventure</button>
+        <button class="topic-chip" data-topic="mystery">Mystery</button>
+        <button class="topic-chip" data-topic="horror">Horror</button>
+        <button class="topic-chip" data-topic="romance">Romance</button>
+        <button class="topic-chip" data-topic="history">History</button>
+        <button class="topic-chip" data-topic="philosophy">Philosophy</button>
+        <button class="topic-chip" data-topic="science">Science</button>
+        <button class="topic-chip" data-topic="children">Children</button>
+        <button class="topic-chip" data-topic="poetry">Poetry</button>
+    </div>
+
+    <div id="results-header" class="results-header" hidden>
+        <span id="results-count" class="results-count"></span>
+    </div>
+
+    <div id="results-container">
+        <div class="browse-loading">Loading popular books...</div>
+    </div>
+
+    <div id="pagination" class="browse-pagination" hidden></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    if (!api.isAuthenticated()) {
+        window.location.href = '/';
+    }
+
+    gwfTheme.render(document.getElementById('theme-switcher'));
+
+    const searchInput = document.getElementById('search-input');
+    const sortSelect = document.getElementById('sort-select');
+    const topicChips = document.getElementById('topic-chips');
+    const resultsContainer = document.getElementById('results-container');
+    const resultsHeader = document.getElementById('results-header');
+    const resultsCount = document.getElementById('results-count');
+    const pagination = document.getElementById('pagination');
+
+    let currentQuery = '';
+    let currentPage = 1;
+    let currentSort = 'popular';
+    let currentTopic = '';
+
+    async function loadBooks(page) {
+        currentPage = page || 1;
+
+        resultsContainer.innerHTML = '<div class="browse-loading">Loading...</div>';
+        resultsHeader.hidden = true;
+        pagination.hidden = true;
+
+        try {
+            const params = new URLSearchParams({ page: currentPage, sort: currentSort });
+            if (currentQuery) params.set('q', currentQuery);
+            if (currentTopic) params.set('topic', currentTopic);
+
+            const data = await api.get('/api/catalog/search/?' + params);
+
+            if (data.results.length === 0) {
+                resultsContainer.innerHTML = '<div class="browse-empty">No books found. Try different filters.</div>';
+                return;
+            }
+
+            resultsHeader.hidden = false;
+            const total = data.count.toLocaleString();
+            const showing = currentQuery || currentTopic
+                ? `${total} books found`
+                : `${total} books available`;
+            resultsCount.textContent = showing;
+
+            const grid = document.createElement('div');
+            grid.className = 'browse-grid';
+
+            for (const book of data.results) {
+                grid.appendChild(createBookCard(book));
+            }
+
+            resultsContainer.innerHTML = '';
+            resultsContainer.appendChild(grid);
+
+            renderPagination(data);
+        } catch (err) {
+            resultsContainer.innerHTML = '<div class="browse-empty">Failed to load books. <button class="btn btn-secondary btn-sm" onclick="loadBooks(currentPage)">Retry</button></div>';
+        }
+    }
+
+    function createBookCard(book) {
+        const card = document.createElement('div');
+        card.className = 'book-card';
+        card.dataset.id = book.gutenberg_id;
+
+        const coverHtml = book.cover_url
+            ? `<img class="book-cover" src="${book.cover_url}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\\'book-cover-placeholder\\'>No Cover</div>'">`
+            : '<div class="book-cover-placeholder">No Cover</div>';
+
+        const subjects = (book.subjects || []).slice(0, 3)
+            .map(s => `<span class="subject-tag" title="${s}">${s}</span>`)
+            .join('');
+
+        const downloads = book.download_count
+            ? `<span class="book-downloads">${book.download_count.toLocaleString()} downloads</span>`
+            : '';
+
+        let actionBtn;
+        if (book.in_library) {
+            actionBtn = '<button class="btn btn-sm btn-in-library" disabled>In Library</button>';
+        } else if (book.catalog_status === 'processing' || book.catalog_status === 'pending') {
+            actionBtn = '<button class="btn btn-sm btn-processing" disabled>Processing...</button>';
+        } else {
+            actionBtn = `<button class="btn btn-sm btn-primary btn-add" data-id="${book.gutenberg_id}" data-title="${book.title.replace(/"/g, '&quot;')}" data-author="${(book.author || '').replace(/"/g, '&quot;')}">Add to Library</button>`;
+        }
+
+        card.innerHTML = `
+            ${coverHtml}
+            <div class="book-details">
+                <h3 class="book-title" title="${book.title.replace(/"/g, '&quot;')}">${book.title}</h3>
+                ${book.author ? `<span class="book-author">${book.author}</span>` : ''}
+                ${downloads}
+                <div class="book-subjects">${subjects}</div>
+                <div class="book-actions">${actionBtn}</div>
+            </div>
+        `;
+        return card;
+    }
+
+    function renderPagination(data) {
+        pagination.innerHTML = '';
+        const hasPrev = !!data.previous;
+        const hasNext = !!data.next;
+
+        if (!hasPrev && !hasNext) {
+            pagination.hidden = true;
+            return;
+        }
+
+        pagination.hidden = false;
+
+        if (hasPrev) {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-secondary btn-sm';
+            btn.textContent = 'Previous';
+            btn.addEventListener('click', () => { loadBooks(currentPage - 1); window.scrollTo(0, 0); });
+            pagination.appendChild(btn);
+        }
+
+        const info = document.createElement('span');
+        info.className = 'doc-meta';
+        info.textContent = `Page ${currentPage}`;
+        pagination.appendChild(info);
+
+        if (hasNext) {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-secondary btn-sm';
+            btn.textContent = 'Next';
+            btn.addEventListener('click', () => { loadBooks(currentPage + 1); window.scrollTo(0, 0); });
+            pagination.appendChild(btn);
+        }
+    }
+
+    async function addToLibrary(gutenbergId, title, author) {
+        try {
+            await api.post('/api/catalog/import/', {
+                platform: 'gutenberg',
+                external_id: String(gutenbergId),
+                title: title,
+                author: author || '',
+            });
+            loadBooks(currentPage);
+        } catch (err) {
+            if (err.status === 409) {
+                loadBooks(currentPage);
+            } else {
+                alert('Failed to add book: ' + (err.message || 'Unknown error'));
+            }
+        }
+    }
+
+    // Event: click Add to Library
+    resultsContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-add');
+        if (!btn) return;
+        btn.disabled = true;
+        btn.textContent = 'Adding...';
+        addToLibrary(btn.dataset.id, btn.dataset.title, btn.dataset.author);
+    });
+
+    // Event: topic chips
+    topicChips.addEventListener('click', (e) => {
+        const chip = e.target.closest('.topic-chip');
+        if (!chip || chip.classList.contains('active')) return;
+        topicChips.querySelectorAll('.topic-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        currentTopic = chip.dataset.topic;
+        loadBooks(1);
+    });
+
+    // Event: sort change
+    sortSelect.addEventListener('change', () => {
+        currentSort = sortSelect.value;
+        loadBooks(1);
+    });
+
+    // Event: search
+    let searchTimeout = null;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            currentQuery = searchInput.value.trim();
+            loadBooks(1);
+        }, 400);
+    });
+
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            clearTimeout(searchTimeout);
+            currentQuery = searchInput.value.trim();
+            loadBooks(1);
+        }
+    });
+
+    // Load popular books on page load
+    loadBooks(1);
+</script>
+{% endblock %}

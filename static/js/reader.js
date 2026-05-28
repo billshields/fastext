@@ -73,7 +73,6 @@ class RSVPEngine {
 
         this._displayWord(chunk.text);
         this.onPositionChange(this.currentPos);
-        this.currentPos += this.chunkSize;
 
         let delay = this.msPerWord * this.chunkSize;
 
@@ -85,10 +84,12 @@ class RSVPEngine {
             delay += (chunk.text.length - 8) * 20;
         }
 
-        // Check if we need more words
         this._checkPrefetch();
 
-        this.timerId = setTimeout(() => this._tick(), delay);
+        this.timerId = setTimeout(() => {
+            this.currentPos += this.chunkSize;
+            this._tick();
+        }, delay);
     }
 
     _getChunk() {

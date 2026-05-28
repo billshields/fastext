@@ -119,9 +119,15 @@ class DocumentTextView(APIView):
         except Document.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        chunks = doc.chunks.order_by('position').values_list('word', flat=True)
+        if doc.is_catalog_book:
+            from apps.catalog.models import CatalogChunk
+            chunks = CatalogChunk.objects.filter(
+                source_id=doc.catalog_source_id,
+            ).order_by('position').values_list('word', flat=True)
+        else:
+            chunks = doc.chunks.order_by('position').values_list('word', flat=True)
         text = ' '.join(chunks)
-        return Response({'id': doc.id, 'title': doc.title, 'text': text})
+        return Response({'id': doc.id, 'title': doc.title, 'text': text, 'read_only': doc.is_catalog_book})
 
     def put(self, request, pk):
         from .models import DocumentChunk
@@ -131,6 +137,12 @@ class DocumentTextView(APIView):
             doc = Document.objects.get(pk=pk, user=request.user, status=Document.Status.COMPLETED)
         except Document.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
+
+        if doc.is_catalog_book:
+            return Response(
+                {'detail': 'Catalog books cannot be edited.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         text = request.data.get('text', '').strip()
         if not text:

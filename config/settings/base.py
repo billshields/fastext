@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     'apps.documents',
     'apps.reading',
     'apps.stats',
+    'apps.catalog',
 ]
 
 MIDDLEWARE = [

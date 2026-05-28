@@ -11,12 +11,14 @@ urlpatterns = [
     path('api/', include('apps.documents.urls')),
     path('api/', include('apps.reading.urls')),
     path('api/', include('apps.stats.urls')),
+    path('api/', include('apps.catalog.urls')),
     # Web views
     path('', TemplateView.as_view(template_name='index.html'), name='index'),
     path('library/', TemplateView.as_view(template_name='library.html'), name='library'),
     path('read/<int:doc_id>/', TemplateView.as_view(template_name='reader.html'), name='reader'),
     path('edit/<int:doc_id>/', TemplateView.as_view(template_name='editor.html'), name='editor'),
     path('stats/', TemplateView.as_view(template_name='stats.html'), name='stats'),
+    path('browse/', TemplateView.as_view(template_name='browse.html'), name='browse'),
 ]
 
 if settings.DEBUG:

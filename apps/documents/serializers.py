@@ -5,13 +5,14 @@ from .models import Document
 
 class DocumentSerializer(serializers.ModelSerializer):
     current_position = serializers.IntegerField(read_only=True, default=0)
+    is_catalog_book = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Document
         fields = [
             'id', 'title', 'original_filename', 'file_type', 'file_size',
             'status', 'total_words', 'error_message', 'uploaded_at', 'processed_at',
-            'current_position',
+            'current_position', 'is_catalog_book',
         ]
         read_only_fields = fields
 

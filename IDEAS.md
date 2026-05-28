@@ -25,6 +25,11 @@
 - ~~Documents completed count and streak tracking~~ ✅
 - ~~Words read per session summary~~ ✅
 
+### Browse / Catalog
+- Connect to additional public domain platforms (Open Library, arXiv, Standard Ebooks, LibriVox)
+- Local catalog cache — store Gutenberg/external API results in our own DB so browsing is instant; run API calls in the background when a user searches, serve cached results immediately, and refresh the cache with fresh upstream data for the next page load
+- Bookshelf curation — featured/staff-pick collections on the browse page
+
 ### Library Management
 - Tags / folders for organization
 

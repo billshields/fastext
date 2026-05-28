@@ -852,6 +852,13 @@
         }
     });
 
+    // Save when page becomes hidden (tab switch, navigation)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden' && engine && engine.currentPos !== lastSavedPos) {
+            immediateSave(engine.currentPos);
+        }
+    });
+
     // Save on page close
     window.addEventListener('beforeunload', () => {
         if (ttsController) ttsController.stop();

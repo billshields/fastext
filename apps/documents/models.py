@@ -18,8 +18,19 @@ class Document(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     total_words = models.PositiveIntegerField(default=0)
     error_message = models.TextField(blank=True, default='')
+    catalog_source = models.ForeignKey(
+        'catalog.CatalogSource',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='documents',
+    )
     uploaded_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def is_catalog_book(self):
+        return self.catalog_source_id is not None
 
     class Meta:
         db_table = 'documents'

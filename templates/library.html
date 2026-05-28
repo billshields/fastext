@@ -9,6 +9,7 @@
             <button id="btn-paste" class="btn btn-primary">Paste Text</button>
             <button id="btn-url" class="btn btn-primary">Import URL</button>
             <button id="btn-upload" class="btn btn-primary">Upload Book</button>
+            <button class="btn btn-secondary" onclick="window.location.href='/browse/'">Browse Books</button>
             <button class="btn btn-secondary" onclick="window.location.href='/stats/'">Stats</button>
             <div id="theme-switcher" class="theme-switcher"></div>
             <button id="btn-logout" class="btn btn-secondary">Logout</button>
@@ -150,12 +151,12 @@
                     <input type="checkbox" class="doc-select-cb" data-id="${doc.id}">
                     <div class="doc-info">
                         <h3 class="doc-title">${doc.title}</h3>
-                        <span class="doc-meta">${doc.file_type ? doc.file_type.toUpperCase() : 'TEXT'} &middot; ${formatSize(doc.file_size)}</span>
+                        <span class="doc-meta">${doc.is_catalog_book ? 'Gutenberg' : (doc.file_type ? doc.file_type.toUpperCase() : 'TEXT')}${doc.file_size ? ' &middot; ' + formatSize(doc.file_size) : ''}</span>
                         ${statusBadge}
                         ${progressBar}
                     </div>
                     <div class="doc-actions">
-                        ${doc.status === 'completed' ? `<button class="btn btn-primary btn-sm" onclick="openReader(${doc.id})">Read</button><button class="btn btn-secondary btn-sm" onclick="openEditor(${doc.id})">Edit</button>` : ''}
+                        ${doc.status === 'completed' ? `<button class="btn btn-primary btn-sm" onclick="openReader(${doc.id})">Read</button>${doc.is_catalog_book ? '' : `<button class="btn btn-secondary btn-sm" onclick="openEditor(${doc.id})">Edit</button>`}` : ''}
                         <button class="btn btn-danger btn-sm" onclick="deleteDoc(${doc.id})">Delete</button>
                     </div>
                 `;

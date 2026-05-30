@@ -13,10 +13,10 @@
 
 ### Reader Experience
 - ~~Progress scrubber — click/drag bar to jump to any position in the document~~ ✅
-- ~~Chapter navigation — jump between chapters if the document has them~~ ✅ (buttons, scrubber markers, [ ] keyboard shortcuts)
+- ~~Chapter navigation — jump between chapters if the document has them~~ ✅ (buttons, scrubber markers, keyboard shortcuts)
 - Sentence context preview — show the surrounding sentence below the RSVP display
 - Comprehension check — periodic quiz/recall prompts after sections
-- Dark/light theme presets instead of individual color pickers
+- ~~Dark/light theme presets instead of individual color pickers~~ ✅
 - Peripheral word preview — show the next/previous word faintly on either side
 
 ### Reading Stats

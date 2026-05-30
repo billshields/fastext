@@ -651,6 +651,8 @@ body {
     position: absolute;
     right: 1rem;
     bottom: 5rem;
+    max-height: calc(100vh - 6rem);
+    overflow-y: auto;
     background: var(--card-bg);
     border: 1px solid var(--secondary-bg);
     border-radius: 12px;
@@ -687,10 +689,12 @@ body {
 
 .setting-row select {
     padding: 0.4rem;
+    max-width: 140px;
     background: var(--input-bg);
     color: var(--text-color);
     border: 1px solid var(--secondary-bg);
     border-radius: 4px;
+    text-overflow: ellipsis;
 }
 
 .setting-row input[type="range"] {

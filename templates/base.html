@@ -26,6 +26,13 @@
         const gwfTheme = {
             themes: ['default', 'warm', 'midnight', 'forest', 'mono'],
             labels: { default: 'Ocean', warm: 'Warm', midnight: 'Midnight', forest: 'Forest', mono: 'Mono' },
+            colors: {
+                default:  { background_color: '#1a1a2e', text_color: '#e0e0e0', ui_color: '#0f3460' },
+                warm:     { background_color: '#1c1712', text_color: '#e8dcc8', ui_color: '#8b6b3d' },
+                midnight: { background_color: '#13111c', text_color: '#d4d0e8', ui_color: '#5a4dbf' },
+                forest:   { background_color: '#0f1a14', text_color: '#d4e4d8', ui_color: '#2d7a4f' },
+                mono:     { background_color: '#141414', text_color: '#e0e0e0', ui_color: '#3580bb' },
+            },
             current() { return localStorage.getItem('gwf_theme') || 'default'; },
             set(name) {
                 localStorage.setItem('gwf_theme', name);
@@ -33,6 +40,9 @@
                 document.querySelectorAll('.theme-swatch').forEach(s => {
                     s.classList.toggle('active', s.dataset.theme === name);
                 });
+                if (this.colors[name] && typeof api !== 'undefined' && api.isAuthenticated()) {
+                    api.patch('/api/auth/preferences/', this.colors[name]).catch(() => {});
+                }
             },
             render(container) {
                 const current = this.current();

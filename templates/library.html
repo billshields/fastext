@@ -294,7 +294,8 @@
             closeUrlModal();
             loadDocuments();
         } catch (err) {
-            urlError.textContent = err.message || 'Failed to import URL.';
+            // Field errors come back as {url: [...]}; show the message, not the JSON
+            urlError.textContent = err.data?.url?.[0] || err.message || 'Failed to import URL.';
             urlError.hidden = false;
         } finally {
             urlLoading.hidden = true;

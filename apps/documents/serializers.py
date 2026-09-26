@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 from rest_framework import serializers
 
 from .models import Document
@@ -25,6 +27,12 @@ class DocumentPasteSerializer(serializers.Serializer):
 class DocumentURLSerializer(serializers.Serializer):
     url = serializers.URLField()
     title = serializers.CharField(max_length=500, required=False, allow_blank=True)
+
+    def validate_url(self, value):
+        # URLField also accepts ftp and ftps
+        if urlsplit(value).scheme not in ('http', 'https'):
+            raise serializers.ValidationError('Only http and https URLs can be imported.')
+        return value
 
 
 class DocumentUploadSerializer(serializers.Serializer):

@@ -1,3 +1,5 @@
+import logging
+
 from django.db import transaction
 from django.db.models import OuterRef, Subquery, Value, Case, When, F, FloatField
 from django.db.models.functions import Cast
@@ -10,6 +12,8 @@ from apps.reading.models import ReadingSession
 from .models import Document
 from .serializers import DocumentSerializer, DocumentUploadSerializer, DocumentPasteSerializer, DocumentURLSerializer
 from .tasks import process_document
+
+logger = logging.getLogger(__name__)
 
 
 class DocumentListView(generics.ListAPIView):
@@ -231,7 +235,9 @@ class DocumentPasteView(APIView):
 class DocumentURLView(APIView):
     def post(self, request):
         import re
+        import requests
         import trafilatura
+        from .fetch import FetchError, fetch_page
         from .models import DocumentChunk
 
         serializer = DocumentURLSerializer(data=request.data)
@@ -240,16 +246,21 @@ class DocumentURLView(APIView):
         url = serializer.validated_data['url']
         user_title = serializer.validated_data.get('title', '').strip()
 
-        import cloudscraper
-
+        # Error details stay in the log: they can describe hosts and network state
         try:
-            scraper = cloudscraper.create_scraper()
-            resp = scraper.get(url, timeout=20)
-            resp.raise_for_status()
-            html = resp.text
-        except Exception as e:
+            html = fetch_page(url)
+        except FetchError as e:
+            logger.warning('URL import of %s stopped: %s', url, e)
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except requests.HTTPError as e:
             return Response(
-                {'detail': f'Could not fetch the URL: {e}'},
+                {'detail': f'The site responded with an error ({e.response.status_code}).'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception:
+            logger.warning('URL import of %s failed', url, exc_info=True)
+            return Response(
+                {'detail': 'Could not fetch the URL. Check the address, or try again later.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

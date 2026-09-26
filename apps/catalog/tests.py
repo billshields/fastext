@@ -81,6 +81,34 @@ class CatalogImportTests(TestCase):
         self.assertEqual(source.status, CatalogSource.Status.PENDING)
         self.assertEqual(source.error_message, '')
 
+    def test_import_failed_book_resets_other_users_copies(self, delay):
+        source = create_source(status=CatalogSource.Status.FAILED)
+        other = User.objects.create_user('other', 'other@example.com', 'testpass123')
+        other_doc = Document.objects.create(
+            user=other, title='Pride and Prejudice', file_type='gutenberg',
+            status=Document.Status.FAILED, error_message='timed out', catalog_source=source,
+        )
+        self.client.post('/api/catalog/import/', self.payload)
+        other_doc.refresh_from_db()
+        self.assertEqual(other_doc.status, Document.Status.PROCESSING)
+        self.assertEqual(other_doc.error_message, '')
+
+    def test_reimport_own_failed_book_retries_it(self, delay):
+        self.client.post('/api/catalog/import/', self.payload)
+        source = CatalogSource.objects.get(external_id='1342')
+        source.status = CatalogSource.Status.FAILED
+        source.save()
+        source.documents.update(status=Document.Status.FAILED, error_message='timed out')
+        delay.reset_mock()
+
+        resp = self.client.post('/api/catalog/import/', self.payload)
+        self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(resp.data['status'], 'processing')
+        delay.assert_called_once_with(source.id)
+        doc = Document.objects.get(user=self.user)
+        self.assertEqual(doc.id, resp.data['id'])
+        self.assertEqual(doc.error_message, '')
+
     def test_import_book_already_processing_does_not_requeue(self, delay):
         create_source(status=CatalogSource.Status.PROCESSING)
         resp = self.client.post('/api/catalog/import/', self.payload)

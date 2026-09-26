@@ -22,8 +22,18 @@ const api = (() => {
         localStorage.removeItem(REFRESH_KEY);
     }
 
+    // The access token is short-lived and refreshed on the first 401, so the session
+    // lasts as long as the refresh token. Checking its expiry here keeps pages from
+    // loading for a session that is already dead and then bouncing back to login.
     function isAuthenticated() {
-        return !!getAccessToken();
+        const refresh = getRefreshToken();
+        if (!getAccessToken() || !refresh) return false;
+        try {
+            const payload = JSON.parse(atob(refresh.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+            return payload.exp * 1000 > Date.now();
+        } catch {
+            return false;
+        }
     }
 
     // Refresh tokens are single-use (rotated + blacklisted), so concurrent 401s

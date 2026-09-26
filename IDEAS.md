@@ -45,7 +45,7 @@
 - Reading challenges / goals
 
 ## Infrastructure
-- Backend API tests — zero test coverage currently
+- ~~Backend API tests~~ ✅
 - Frontend smoke tests
 - Production deployment config (gunicorn, nginx, proper settings, HTTPS)
 - Process manager (systemd/supervisor) instead of start.sh for production

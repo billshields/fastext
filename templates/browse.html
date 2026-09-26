@@ -293,7 +293,9 @@
             : '';
 
         let actionBtn;
-        if (book.in_library) {
+        if (book.in_library && book.catalog_status === 'failed') {
+            actionBtn = `<button class="btn btn-sm btn-primary btn-add" data-id="${book.gutenberg_id}" data-title="${escapeHtml(book.title)}" data-author="${escapeHtml(book.author)}">Retry Download</button>`;
+        } else if (book.in_library) {
             actionBtn = '<button class="btn btn-sm btn-in-library" disabled>In Library</button>';
         } else if (book.catalog_status === 'processing' || book.catalog_status === 'pending') {
             actionBtn = '<button class="btn btn-sm btn-processing" disabled>Processing...</button>';

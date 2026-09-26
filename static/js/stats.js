@@ -80,7 +80,8 @@
                 }
                 return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
             });
-            const values = data.data.map(d => Math.round(d.reading_time / 60));
+            // Tenths of a minute, so a day with only a few seconds of reading still gets a bar
+            const values = data.data.map(d => Math.round(d.reading_time / 6) / 10);
 
             if (readingTimeChart) {
                 readingTimeChart.data.labels = labels;

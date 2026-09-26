@@ -57,6 +57,19 @@ class CatalogSearchView(APIView):
         return Response(data)
 
 
+def requeue_failed_source(catalog_source):
+    # Retry a previously failed download. The conditional update makes sure
+    # only one concurrent import re-queues it.
+    requeued = CatalogSource.objects.filter(
+        pk=catalog_source.pk, status=CatalogSource.Status.FAILED,
+    ).update(status=CatalogSource.Status.PENDING, error_message='')
+    if requeued:
+        # Every copy of the book goes back to processing, not just the one being added
+        catalog_source.documents.update(status=Document.Status.PROCESSING, error_message='')
+        process_catalog_source.delay(catalog_source.id)
+    catalog_source.status = CatalogSource.Status.PENDING
+
+
 class CatalogImportView(APIView):
     def post(self, request):
         serializer = CatalogImportSerializer(data=request.data)
@@ -72,8 +85,13 @@ class CatalogImportView(APIView):
             user=request.user,
             catalog_source__platform=platform,
             catalog_source__external_id=external_id,
-        ).first()
+        ).select_related('catalog_source').first()
         if existing:
+            # Adding a book whose download failed retries it in place
+            if existing.catalog_source.status == CatalogSource.Status.FAILED:
+                requeue_failed_source(existing.catalog_source)
+                existing.refresh_from_db()
+                return Response(DocumentSerializer(existing).data, status=status.HTTP_202_ACCEPTED)
             return Response(
                 {'detail': 'This book is already in your library.', 'document_id': existing.id},
                 status=status.HTTP_409_CONFLICT,
@@ -95,14 +113,7 @@ class CatalogImportView(APIView):
         if created:
             process_catalog_source.delay(catalog_source.id)
         elif catalog_source.status == CatalogSource.Status.FAILED:
-            # Retry a previously failed download. The conditional update makes sure
-            # only one concurrent import re-queues it.
-            requeued = CatalogSource.objects.filter(
-                pk=catalog_source.pk, status=CatalogSource.Status.FAILED,
-            ).update(status=CatalogSource.Status.PENDING, error_message='')
-            if requeued:
-                process_catalog_source.delay(catalog_source.id)
-            catalog_source.status = CatalogSource.Status.PENDING
+            requeue_failed_source(catalog_source)
 
         # Determine document status based on catalog source status
         if catalog_source.status == CatalogSource.Status.COMPLETED:

@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.db.models import Sum, Avg
 from django.db.models.functions import TruncWeek
 from django.utils import timezone
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -147,18 +148,16 @@ class WpmHistoryView(APIView):
 
         qs = DailyReadingLog.objects.filter(user=user)
         if document_id:
-            qs = qs.filter(document_id=document_id)
-            data = list(
-                qs.values('date')
-                .annotate(wpm=Avg('ending_wpm'))
-                .order_by('date')
-            )
-        else:
-            data = list(
-                qs.values('date')
-                .annotate(wpm=Avg('ending_wpm'))
-                .order_by('date')
-            )
+            try:
+                qs = qs.filter(document_id=int(document_id))
+            except ValueError:
+                return Response({'detail': 'document_id must be an integer.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        data = list(
+            qs.values('date')
+            .annotate(wpm=Avg('ending_wpm'))
+            .order_by('date')
+        )
 
         result = [
             {

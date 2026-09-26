@@ -141,6 +141,10 @@ class WpmHistoryTests(TestCase):
         resp = self.client.get('/api/stats/wpm-history/', {'document_id': self.doc.id})
         self.assertEqual(len(resp.data['data']), 2)
 
+    def test_wpm_history_invalid_document_id(self):
+        resp = self.client.get('/api/stats/wpm-history/', {'document_id': 'abc'})
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 class DocumentStatsTests(TestCase):
     def setUp(self):

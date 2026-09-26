@@ -1,7 +1,13 @@
-from django.test import TestCase
+from io import StringIO
+from unittest import mock
+
+from django.core.management import CommandError, call_command
+from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 from rest_framework import status
 
+from apps.catalog.models import CatalogSource
+from apps.documents.models import Document
 from .models import User, UserPreferences
 
 
@@ -157,3 +163,52 @@ class PreferencesTests(TestCase):
         client = APIClient()
         resp = client.get('/api/auth/preferences/')
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+@override_settings(DEBUG=True)
+@mock.patch('apps.users.management.commands.seed_browsertest.process_catalog_source.delay')
+class SeedBrowsertestTests(TestCase):
+    def seed(self):
+        call_command('seed_browsertest', stdout=StringIO())
+
+    def test_creates_account_and_fixtures(self, delay):
+        self.seed()
+        user = User.objects.get(username='browsertest')
+        self.assertEqual(Document.objects.filter(user=user).count(), 2)
+        probe = Document.objects.get(user=user, file_type='text')
+        self.assertTrue(probe.title.startswith('<img'))
+        self.assertEqual(probe.chunks.count(), probe.total_words)
+        source = CatalogSource.objects.get(external_id='1342')
+        delay.assert_called_once_with(source.id)
+
+        resp = APIClient().post('/api/auth/login/', {'username': 'browsertest', 'password': 'browsertest-pass-123'})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_rerun_keeps_data_and_resets_password(self, delay):
+        self.seed()
+        user = User.objects.get(username='browsertest')
+        user.set_password('changed-by-a-test')
+        user.save()
+
+        self.seed()
+        self.assertEqual(User.objects.filter(username='browsertest').count(), 1)
+        self.assertEqual(Document.objects.filter(user=user).count(), 2)
+        user.refresh_from_db()
+        self.assertTrue(user.check_password('browsertest-pass-123'))
+
+    def test_links_existing_catalog_book_without_downloading(self, delay):
+        CatalogSource.objects.create(
+            platform='gutenberg', external_id='1342', title='Pride and Prejudice',
+            status=CatalogSource.Status.COMPLETED, total_words=100,
+        )
+        self.seed()
+        book = Document.objects.get(user__username='browsertest', file_type='gutenberg')
+        self.assertEqual(book.status, Document.Status.COMPLETED)
+        self.assertEqual(book.total_words, 100)
+        delay.assert_not_called()
+
+    @override_settings(DEBUG=False)
+    def test_refuses_without_debug(self, delay):
+        with self.assertRaises(CommandError):
+            self.seed()
+        self.assertFalse(User.objects.filter(username='browsertest').exists())

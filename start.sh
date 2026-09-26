@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start all GottaWordFast services
+# Start all fastext services
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"

@@ -824,12 +824,12 @@
     function dismissHelpHint() {
         if (elements.helpHint) {
             elements.helpHint.classList.add('hidden');
-            localStorage.setItem('gottawordfast_help_seen', '1');
+            localStorage.setItem('fastext_help_seen', '1');
         }
     }
 
     function initHelpHint() {
-        if (localStorage.getItem('gottawordfast_help_seen')) {
+        if (localStorage.getItem('fastext_help_seen')) {
             if (elements.helpHint) elements.helpHint.classList.add('hidden');
         }
     }

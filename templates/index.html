@@ -1,9 +1,19 @@
 {% extends "base.html" %}
-{% block title %}GottaWordFast - Login{% endblock %}
+{% block title %}fastext - Login{% endblock %}
+
+{% block extra_head %}
+<script>
+    // Runs before the page draws, so signed-in users never see the login form.
+    // replace() keeps this page out of history, so Back doesn't bounce here again.
+    if (api.isAuthenticated()) {
+        location.replace('/library/');
+    }
+</script>
+{% endblock %}
 
 {% block body %}
 <div class="auth-container">
-    <h1 class="auth-title">GottaWordFast</h1>
+    <h1 class="auth-title">fastext</h1>
     <p class="auth-subtitle">Read faster. Retain more.</p>
     <div id="theme-switcher" class="theme-switcher" style="margin-bottom:1.5rem;"></div>
 
@@ -30,22 +40,24 @@
 
 {% block extra_scripts %}
 <script>
-    if (api.isAuthenticated()) {
-        window.location.href = '/library/';
-    }
+    fastextTheme.render(document.getElementById('theme-switcher'));
 
-    gwfTheme.render(document.getElementById('theme-switcher'));
+    // Only one form is on screen at a time; the links swap between them
+    function showAuthForm(name) {
+        const showRegister = name === 'register';
+        document.getElementById('login-form').hidden = showRegister;
+        document.getElementById('register-form').hidden = !showRegister;
+        document.getElementById(showRegister ? 'reg-username' : 'login-username').focus();
+    }
 
     document.getElementById('show-register').addEventListener('click', (e) => {
         e.preventDefault();
-        document.getElementById('login-form').hidden = true;
-        document.getElementById('register-form').hidden = false;
+        showAuthForm('register');
     });
 
     document.getElementById('show-login').addEventListener('click', (e) => {
         e.preventDefault();
-        document.getElementById('register-form').hidden = true;
-        document.getElementById('login-form').hidden = false;
+        showAuthForm('login');
     });
 
     document.getElementById('btn-login').addEventListener('click', async () => {
@@ -57,7 +69,7 @@
         try {
             const data = await api.post('/api/auth/login/', { username, password }, false);
             api.setTokens(data.access, data.refresh);
-            window.location.href = '/library/';
+            location.replace('/library/');
         } catch (err) {
             errorEl.textContent = 'Invalid username or password.';
             errorEl.hidden = false;
@@ -74,7 +86,7 @@
         try {
             const data = await api.post('/api/auth/register/', { username, email, password }, false);
             api.setTokens(data.tokens.access, data.tokens.refresh);
-            window.location.href = '/library/';
+            location.replace('/library/');
         } catch (err) {
             errorEl.textContent = err.message || 'Registration failed.';
             errorEl.hidden = false;

@@ -4,7 +4,7 @@
         return;
     }
 
-    gwfTheme.render(document.getElementById('theme-switcher'));
+    fastextTheme.render(document.getElementById('theme-switcher'));
 
     function getThemeColors() {
         const style = getComputedStyle(document.documentElement);

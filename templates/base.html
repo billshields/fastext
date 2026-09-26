@@ -3,24 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}GottaWordFast{% endblock %}</title>
+    <title>{% block title %}fastext{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Open+Sans:wght@400;600&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/reader.css' %}">
+    <script src="{% static 'js/api.js' %}"></script>
     {% block extra_head %}{% endblock %}
 </head>
 <body>
     <script>
         // Apply saved theme before paint to prevent flash
         (function() {
-            var t = localStorage.getItem('gwf_theme') || 'default';
+            var t = localStorage.getItem('fastext_theme') || 'default';
             document.documentElement.setAttribute('data-theme', t);
         })();
     </script>
     {% block body %}{% endblock %}
-    <script src="{% static 'js/api.js' %}"></script>
     <script>
         // Escape API data before interpolating it into innerHTML — available on all pages
         function escapeHtml(value) {
@@ -33,7 +33,7 @@
         }
 
         // Theme switcher logic — available on all pages
-        const gwfTheme = {
+        const fastextTheme = {
             themes: ['default', 'warm', 'midnight', 'forest', 'mono'],
             labels: { default: 'Ocean', warm: 'Warm', midnight: 'Midnight', forest: 'Forest', mono: 'Mono' },
             colors: {
@@ -43,9 +43,9 @@
                 forest:   { background_color: '#0f1a14', text_color: '#d4e4d8', ui_color: '#2d7a4f' },
                 mono:     { background_color: '#141414', text_color: '#e0e0e0', ui_color: '#3580bb' },
             },
-            current() { return localStorage.getItem('gwf_theme') || 'default'; },
+            current() { return localStorage.getItem('fastext_theme') || 'default'; },
             set(name) {
-                localStorage.setItem('gwf_theme', name);
+                localStorage.setItem('fastext_theme', name);
                 document.documentElement.setAttribute('data-theme', name);
                 document.querySelectorAll('.theme-swatch').forEach(s => {
                     s.classList.toggle('active', s.dataset.theme === name);

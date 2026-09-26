@@ -1,4 +1,4 @@
-# GottaWordFast — Ideas & Roadmap
+# fastext — Ideas & Roadmap
 
 ## Bugs / Polish
 - No loading indicator when CodeMirror CDN modules are being fetched in the editor

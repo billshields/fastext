@@ -36,7 +36,8 @@ if [ ! -f /etc/apt/sources.list.d/mysql.list ]; then
     dpkg -i "/tmp/$MYSQL_APT_CONFIG"
 fi
 apt-get update
-apt-get install -y mysql-server libmysqlclient-dev redis-server nginx certbot \
+# libssl-dev: Oracle's mysqlclient.pc requires openssl.pc, without which the mysqlclient build fails
+apt-get install -y mysql-server libmysqlclient-dev libssl-dev redis-server nginx certbot \
     python3-venv python3-dev build-essential pkg-config git ufw
 
 # Only local connections; the app talks to MySQL over localhost
@@ -54,7 +55,9 @@ ufw --force enable
 
 echo '==> App code'
 id fastext &>/dev/null || useradd --system --home-dir "$APP" --shell /usr/sbin/nologin fastext
-if [ ! -d "$APP/.git" ]; then
+if [ -d "$APP/.git" ]; then
+    sudo -u fastext git -C "$APP" pull --ff-only
+else
     git clone --branch "$BRANCH" "$REPO" "$APP"
 fi
 mkdir -p "$APP/media"

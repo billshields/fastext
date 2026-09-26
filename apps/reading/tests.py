@@ -1,9 +1,13 @@
+from datetime import date, datetime, timezone as dt_timezone
+from unittest import mock
+
 from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
 
 from apps.users.models import User
 from apps.documents.models import Document, DocumentChunk
+from apps.stats.models import DailyReadingLog
 from .models import ReadingSession
 
 
@@ -83,6 +87,15 @@ class ReadViewTests(TestCase):
         resp = self.client.get(f'/api/documents/{self.doc.id}/read/')
         self.assertEqual(resp.data['session']['current_position'], 10)
 
+    def test_read_loads_window_around_position(self):
+        doc = create_simple_document(self.user, 'Long Doc', word_count=2000)
+        self.client.get(f'/api/documents/{doc.id}/read/')
+        ReadingSession.objects.filter(user=self.user, document=doc).update(current_position=1200)
+        resp = self.client.get(f'/api/documents/{doc.id}/read/')
+        positions = [w['pos'] for w in resp.data['words']]
+        self.assertEqual(positions[0], 700)
+        self.assertEqual(positions[-1], 1699)
+
     def test_read_inherits_user_preferences(self):
         self.user.preferences.default_wpm = 500
         self.user.preferences.chunk_size = 3
@@ -136,6 +149,10 @@ class WordsViewTests(TestCase):
     def test_get_words_not_found(self):
         resp = self.client.get('/api/documents/99999/words/')
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_get_words_invalid_params(self):
+        resp = self.client.get(f'/api/documents/{self.doc.id}/words/', {'start': 'abc'})
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 class ProgressViewTests(TestCase):
@@ -195,6 +212,57 @@ class ProgressViewTests(TestCase):
             format='json',
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_progress_counts_words_read(self):
+        self.client.post(f'/api/documents/{self.doc.id}/progress/', {'position': 30}, format='json')
+        log = DailyReadingLog.objects.get(user=self.user, document=self.doc)
+        self.assertEqual(log.words_read, 30)
+
+    def test_seek_does_not_count_words_read(self):
+        url = f'/api/documents/{self.doc.id}/progress/'
+        self.client.post(url, {'position': 10}, format='json')
+        self.client.post(url, {'position': 80, 'seek': True}, format='json')
+        self.client.post(url, {'position': 85}, format='json')
+
+        log = DailyReadingLog.objects.get(user=self.user, document=self.doc)
+        self.assertEqual(log.words_read, 15)
+        session = ReadingSession.objects.get(user=self.user, document=self.doc)
+        self.assertEqual(session.current_position, 85)
+
+    def test_seek_to_end_does_not_mark_completion(self):
+        self.client.post(
+            f'/api/documents/{self.doc.id}/progress/',
+            {'position': 100, 'seek': True},
+            format='json',
+        )
+        session = ReadingSession.objects.get(user=self.user, document=self.doc)
+        self.assertIsNone(session.completed_at)
+
+    def test_progress_logged_on_readers_local_day(self):
+        # 03:00 UTC on Jan 1 is still Dec 31 in New York
+        utc_now = datetime(2026, 1, 1, 3, 0, tzinfo=dt_timezone.utc)
+        with mock.patch('django.utils.timezone.now', return_value=utc_now):
+            self.client.post(
+                f'/api/documents/{self.doc.id}/progress/',
+                {'position': 10},
+                format='json',
+                HTTP_X_TIMEZONE='America/New_York',
+            )
+        log = DailyReadingLog.objects.get(user=self.user, document=self.doc)
+        self.assertEqual(log.date, date(2025, 12, 31))
+
+    def test_invalid_timezone_falls_back_to_utc(self):
+        utc_now = datetime(2026, 1, 1, 3, 0, tzinfo=dt_timezone.utc)
+        with mock.patch('django.utils.timezone.now', return_value=utc_now):
+            resp = self.client.post(
+                f'/api/documents/{self.doc.id}/progress/',
+                {'position': 10},
+                format='json',
+                HTTP_X_TIMEZONE='America',
+            )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        log = DailyReadingLog.objects.get(user=self.user, document=self.doc)
+        self.assertEqual(log.date, date(2026, 1, 1))
 
 
 class ChaptersViewTests(TestCase):

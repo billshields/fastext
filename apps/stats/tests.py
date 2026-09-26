@@ -1,4 +1,5 @@
-from datetime import timedelta
+from datetime import date, datetime, timedelta, timezone as dt_timezone
+from unittest import mock
 
 from django.test import TestCase
 from django.utils import timezone
@@ -70,6 +71,20 @@ class StatsOverviewTests(TestCase):
         )
         resp = self.client.get('/api/stats/overview/')
         self.assertEqual(resp.data['current_streak'], 2)
+
+    def test_overview_uses_readers_local_day(self):
+        client, user = create_authed_client('islander')
+        doc = create_simple_document(user)
+        DailyReadingLog.objects.create(
+            user=user, document=doc, date=date(2026, 1, 1),
+            reading_time=60, words_read=200, ending_wpm=300, sessions_count=1,
+        )
+        # 12:00 UTC on Dec 31 is already Jan 1 in Kiritimati (UTC+14)
+        utc_now = datetime(2025, 12, 31, 12, 0, tzinfo=dt_timezone.utc)
+        with mock.patch('django.utils.timezone.now', return_value=utc_now):
+            resp = client.get('/api/stats/overview/', HTTP_X_TIMEZONE='Pacific/Kiritimati')
+        self.assertEqual(resp.data['today_words_read'], 200)
+        self.assertEqual(resp.data['current_streak'], 1)
 
     def test_overview_completed_docs(self):
         session = ReadingSession.objects.create(

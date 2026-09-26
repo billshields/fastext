@@ -217,7 +217,7 @@
                 row.className = 'doc-stat-row';
                 row.innerHTML = `
                     <div class="doc-stat-info">
-                        <span class="doc-stat-title">${doc.title}</span>
+                        <span class="doc-stat-title">${escapeHtml(doc.title)}</span>
                         <span class="badge ${statusClass}">${status}</span>
                     </div>
                     <div class="doc-stat-metrics">

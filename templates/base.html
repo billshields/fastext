@@ -22,6 +22,16 @@
     {% block body %}{% endblock %}
     <script src="{% static 'js/api.js' %}"></script>
     <script>
+        // Escape API data before interpolating it into innerHTML — available on all pages
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         // Theme switcher logic — available on all pages
         const gwfTheme = {
             themes: ['default', 'warm', 'midnight', 'forest', 'mono'],

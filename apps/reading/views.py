@@ -35,10 +35,11 @@ class ReadView(APIView):
             },
         )
 
-        # Always load from position 0 up to current_position + 500
-        # so rewinding after reload always works
+        # Load a window around the saved position; the reader prefetches
+        # more in either direction as it moves
         words = list(
             get_chunks_queryset(doc).filter(
+                position__gte=max(0, session.current_position - 500),
                 position__lt=session.current_position + 500,
             ).values('position', 'word', 'sentence_end')
         )
@@ -53,8 +54,11 @@ class WordsView(APIView):
     """Return a range of words for a document."""
 
     def get(self, request, doc_id):
-        start = int(request.query_params.get('start', 0))
-        count = min(int(request.query_params.get('count', 500)), 1000)
+        try:
+            start = int(request.query_params.get('start', 0))
+            count = min(int(request.query_params.get('count', 500)), 1000)
+        except ValueError:
+            return Response({'detail': 'start and count must be integers.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             doc = Document.objects.get(pk=doc_id, user=request.user)
@@ -91,7 +95,9 @@ class ProgressView(APIView):
 
         old_position = session.current_position
         new_position = serializer.validated_data['position']
-        words_advanced = max(0, new_position - old_position)
+        seek = serializer.validated_data['seek']
+        # Skipping ahead isn't reading, so a seek doesn't count toward words read
+        words_advanced = 0 if seek else max(0, new_position - old_position)
         reading_time = serializer.validated_data.get('reading_time', 0)
 
         session.current_position = new_position
@@ -99,8 +105,8 @@ class ProgressView(APIView):
             session.total_reading_time += reading_time
         session.save(update_fields=['current_position', 'total_reading_time', 'last_read_at'])
 
-        # Log daily reading stats
-        today = timezone.now().date()
+        # Log daily reading stats, bucketed by the reader's local day
+        today = timezone.localdate()
         DailyReadingLog.objects.update_or_create(
             user=request.user, document_id=doc_id, date=today,
             defaults={},
@@ -114,8 +120,9 @@ class ProgressView(APIView):
             sessions_count=F('sessions_count') + 1,
         )
 
-        # Check completion
-        if (new_position >= session.document.total_words - session.chunk_size
+        # Check completion (jumping to the end doesn't count as finishing)
+        if (not seek
+                and new_position >= session.document.total_words - session.chunk_size
                 and not session.completed_at):
             session.completed_at = timezone.now()
             session.save(update_fields=['completed_at'])

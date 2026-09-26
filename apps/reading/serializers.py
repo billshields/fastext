@@ -20,6 +20,8 @@ class ReadingSessionSerializer(serializers.ModelSerializer):
 class ProgressSerializer(serializers.Serializer):
     position = serializers.IntegerField(min_value=0)
     reading_time = serializers.IntegerField(min_value=0, required=False, default=0)
+    # True when the position moved by navigation (scrubber, chapter jump) rather than reading
+    seek = serializers.BooleanField(required=False, default=False)
 
 
 class SessionUpdateSerializer(serializers.Serializer):

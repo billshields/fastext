@@ -98,6 +98,29 @@ class LogoutTests(TestCase):
         resp = self.client.post('/api/auth/logout/', {'refresh': 'garbage'})
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_logout_revokes_refresh_token(self):
+        resp = self.client.post('/api/auth/logout/', {'refresh': self.refresh})
+        self.assertEqual(resp.status_code, status.HTTP_205_RESET_CONTENT)
+
+        resp = self.client.post('/api/auth/refresh/', {'refresh': self.refresh})
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_logout_with_expired_access_token(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer expired.or.invalid')
+        resp = self.client.post('/api/auth/logout/', {'refresh': self.refresh})
+        self.assertEqual(resp.status_code, status.HTTP_205_RESET_CONTENT)
+
+        resp = self.client.post('/api/auth/refresh/', {'refresh': self.refresh})
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_refresh_rotation_revokes_old_token(self):
+        resp = self.client.post('/api/auth/refresh/', {'refresh': self.refresh})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertNotEqual(resp.data['refresh'], self.refresh)
+
+        resp = self.client.post('/api/auth/refresh/', {'refresh': self.refresh})
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
 class PreferencesTests(TestCase):
     def setUp(self):

@@ -24,6 +24,11 @@ class RegisterView(generics.CreateAPIView):
 
 
 class LogoutView(generics.GenericAPIView):
+    # Holding the refresh token is enough to revoke it, so logout still works
+    # when the access token has already expired
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
     def post(self, request):
         try:
             refresh_token = request.data['refresh']

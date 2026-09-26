@@ -38,26 +38,31 @@ def process_catalog_source(self, catalog_source_id):
             ))
             position += 1
 
-            if len(chunks) >= 5000:
-                CatalogChunk.objects.bulk_create(chunks)
-                chunks = []
+        # Replace any chunks left by an earlier attempt that failed partway
+        with transaction.atomic():
+            CatalogChunk.objects.filter(source=source).delete()
 
-        if chunks:
-            CatalogChunk.objects.bulk_create(chunks)
+            for i in range(0, len(chunks), 5000):
+                CatalogChunk.objects.bulk_create(chunks[i:i + 5000])
 
-        now = timezone.now()
-        source.status = CatalogSource.Status.COMPLETED
-        source.total_words = position
-        source.processed_at = now
-        source.save(update_fields=['status', 'total_words', 'processed_at'])
+            now = timezone.now()
+            source.status = CatalogSource.Status.COMPLETED
+            source.total_words = position
+            source.processed_at = now
+            source.save(update_fields=['status', 'total_words', 'processed_at'])
 
-        source.documents.update(
-            status='completed',
-            total_words=position,
-            processed_at=now,
-        )
+            source.documents.update(
+                status='completed',
+                total_words=position,
+                processed_at=now,
+            )
 
     except Exception as exc:
+        # Stay "processing" while retries remain so a concurrent import doesn't
+        # see FAILED and queue a duplicate run
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=exc, countdown=60)
+
         error_msg = str(exc)[:1000]
         source.status = CatalogSource.Status.FAILED
         source.error_message = error_msg
@@ -68,4 +73,4 @@ def process_catalog_source(self, catalog_source_id):
             error_message=error_msg,
         )
 
-        raise self.retry(exc=exc, countdown=60)
+        raise

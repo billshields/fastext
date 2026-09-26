@@ -1,6 +1,8 @@
 const api = (() => {
     const TOKEN_KEY = 'sr_access';
     const REFRESH_KEY = 'sr_refresh';
+    // Sent with each request so the server buckets reading stats by the user's local day
+    const TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     function getAccessToken() {
         return localStorage.getItem(TOKEN_KEY);
@@ -24,7 +26,18 @@ const api = (() => {
         return !!getAccessToken();
     }
 
-    async function refreshAccessToken() {
+    // Refresh tokens are single-use (rotated + blacklisted), so concurrent 401s
+    // must share one refresh call or the losers would log the user out
+    let refreshInFlight = null;
+
+    function refreshAccessToken() {
+        if (!refreshInFlight) {
+            refreshInFlight = doRefresh().finally(() => { refreshInFlight = null; });
+        }
+        return refreshInFlight;
+    }
+
+    async function doRefresh() {
         const refresh = getRefreshToken();
         if (!refresh) throw new Error('No refresh token');
 
@@ -54,6 +67,7 @@ const api = (() => {
             }
             options.headers = options.headers || {};
             options.headers['Authorization'] = `Bearer ${token}`;
+            options.headers['X-Timezone'] = TIMEZONE;
         }
 
         let resp = await fetch(url, options);
@@ -117,6 +131,7 @@ const api = (() => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-Timezone': TIMEZONE,
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             },
             body: JSON.stringify(data),
@@ -127,7 +142,8 @@ const api = (() => {
     function logout() {
         const refresh = getRefreshToken();
         if (refresh) {
-            post('/api/auth/logout/', { refresh }).catch(() => {});
+            // keepalive, so revoking the token survives the redirect that follows logout
+            beacon('/api/auth/logout/', { refresh });
         }
         clearTokens();
     }

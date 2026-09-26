@@ -15,7 +15,10 @@ from .tasks import process_catalog_source
 class CatalogSearchView(APIView):
     def get(self, request):
         query = request.query_params.get('q', '').strip()
-        page = int(request.query_params.get('page', 1))
+        try:
+            page = int(request.query_params.get('page', 1))
+        except ValueError:
+            return Response({'detail': 'page must be an integer.'}, status=status.HTTP_400_BAD_REQUEST)
         sort = request.query_params.get('sort', 'popular').strip()
         topic = request.query_params.get('topic', '').strip()
 
@@ -91,6 +94,15 @@ class CatalogImportView(APIView):
 
         if created:
             process_catalog_source.delay(catalog_source.id)
+        elif catalog_source.status == CatalogSource.Status.FAILED:
+            # Retry a previously failed download. The conditional update makes sure
+            # only one concurrent import re-queues it.
+            requeued = CatalogSource.objects.filter(
+                pk=catalog_source.pk, status=CatalogSource.Status.FAILED,
+            ).update(status=CatalogSource.Status.PENDING, error_message='')
+            if requeued:
+                process_catalog_source.delay(catalog_source.id)
+            catalog_source.status = CatalogSource.Status.PENDING
 
         # Determine document status based on catalog source status
         if catalog_source.status == CatalogSource.Status.COMPLETED:

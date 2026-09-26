@@ -20,7 +20,7 @@ def calculate_streaks(user):
     if not dates:
         return 0, 0
 
-    today = timezone.now().date()
+    today = timezone.localdate()
 
     # Current streak: must include today or yesterday
     current_streak = 0
@@ -52,7 +52,7 @@ def calculate_streaks(user):
 class StatsOverviewView(APIView):
     def get(self, request):
         user = request.user
-        today = timezone.now().date()
+        today = timezone.localdate()
 
         totals = DailyReadingLog.objects.filter(user=user).aggregate(
             total_reading_time=Sum('reading_time'),
@@ -88,7 +88,7 @@ class ReadingTimeView(APIView):
     def get(self, request):
         user = request.user
         period = request.query_params.get('period', 'week')
-        today = timezone.now().date()
+        today = timezone.localdate()
 
         if period == 'week':
             start_date = today - timedelta(days=6)

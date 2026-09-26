@@ -150,7 +150,7 @@
                 card.innerHTML = `
                     <input type="checkbox" class="doc-select-cb" data-id="${doc.id}">
                     <div class="doc-info">
-                        <h3 class="doc-title">${doc.title}</h3>
+                        <h3 class="doc-title">${escapeHtml(doc.title)}</h3>
                         <span class="doc-meta">${doc.is_catalog_book ? 'Gutenberg' : (doc.file_type ? doc.file_type.toUpperCase() : 'TEXT')}${doc.file_size ? ' &middot; ' + formatSize(doc.file_size) : ''}</span>
                         ${statusBadge}
                         ${progressBar}

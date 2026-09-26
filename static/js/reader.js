@@ -64,10 +64,17 @@ class RSVPEngine {
     _tick() {
         if (!this.playing) return;
 
-        const chunk = this._getChunk();
-        if (!chunk) {
+        if (this.currentPos >= this.totalWords) {
             this.pause();
             if (this.onFinished) this.onFinished();
+            return;
+        }
+
+        const chunk = this._getChunk();
+        if (!chunk) {
+            // Words haven't arrived yet — wait for the prefetch instead of stopping
+            this._checkPrefetch();
+            this.timerId = setTimeout(() => this._tick(), 100);
             return;
         }
 
@@ -93,16 +100,7 @@ class RSVPEngine {
     }
 
     _getChunk() {
-        const words = [];
-        for (let i = 0; i < this.chunkSize; i++) {
-            const w = this.words.get(this.currentPos + i);
-            if (!w) return null;
-            words.push(w);
-        }
-        return {
-            text: words.map(w => w.word).join(' '),
-            sentenceEnd: words[words.length - 1].se,
-        };
+        return this._getChunkAt(this.currentPos);
     }
 
     _displayCurrentWord() {
@@ -121,26 +119,32 @@ class RSVPEngine {
     }
 
     _checkPrefetch() {
-        const keys = [...this.words.keys()];
-        if (keys.length === 0) return;
-
-        // Prefetch forward when within 100 words of max loaded
-        const maxLoaded = Math.max(...keys);
-        const forwardThreshold = this.currentPos + 100;
-        if (forwardThreshold >= maxLoaded && !this._prefetchRequested.has(maxLoaded + 1)) {
-            this._prefetchRequested.add(maxLoaded + 1);
-            this.onNeedMoreWords(maxLoaded + 1);
-        }
-
-        // Prefetch backward when within 100 words of min loaded
-        const minLoaded = Math.min(...keys);
-        if (minLoaded > 0 && this.currentPos - 100 < minLoaded) {
-            const backStart = Math.max(0, minLoaded - 500);
-            if (!this._prefetchRequested.has(`back-${backStart}`)) {
-                this._prefetchRequested.add(`back-${backStart}`);
-                this.onNeedMoreWords(backStart);
+        // Fetch when there's a missing word within 100 positions either side.
+        // Scanning the neighbourhood (rather than the min/max of everything
+        // loaded) also fills gaps left behind by scrubber jumps.
+        const ahead = Math.min(this.totalWords, this.currentPos + 100);
+        for (let pos = this.currentPos; pos < ahead; pos++) {
+            if (!this.words.has(pos)) {
+                this._requestWords(pos);
+                break;
             }
         }
+
+        const behind = Math.max(0, this.currentPos - 100);
+        for (let pos = this.currentPos - 1; pos >= behind; pos--) {
+            if (!this.words.has(pos)) {
+                this._requestWords(Math.max(0, pos - 499));
+                break;
+            }
+        }
+    }
+
+    _requestWords(start) {
+        if (this._prefetchRequested.has(start)) return;
+        this._prefetchRequested.add(start);
+        // Only dedupe while in flight, so a failed fetch is retried on a later check
+        Promise.resolve(this.onNeedMoreWords(start))
+            .finally(() => this._prefetchRequested.delete(start));
     }
 
     displayWordAtPosition(pos) {
@@ -155,12 +159,15 @@ class RSVPEngine {
     }
 
     _getChunkAt(pos) {
+        // The last chunk of a document may be shorter than chunkSize
+        const end = Math.min(pos + this.chunkSize, this.totalWords);
         const words = [];
-        for (let i = 0; i < this.chunkSize; i++) {
-            const w = this.words.get(pos + i);
+        for (let p = pos; p < end; p++) {
+            const w = this.words.get(p);
             if (!w) return null;
             words.push(w);
         }
+        if (words.length === 0) return null;
         return {
             text: words.map(w => w.word).join(' '),
             sentenceEnd: words[words.length - 1].se,

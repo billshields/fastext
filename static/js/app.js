@@ -73,6 +73,7 @@
             engine.loadWords(data.words);
             engine.setPosition(session.current_position);
             lastSavedPos = session.current_position;
+            lastRequestedPos = session.current_position;
 
             if (window.speechSynthesis && typeof TTSController !== 'undefined') {
                 ttsController = new TTSController({
@@ -178,11 +179,16 @@
         const ratio = engine.totalWords > 0 ? engine.currentPos / engine.totalWords : 0;
         const pct = Math.round(ratio * 100);
         elements.progress.textContent = pct + '%';
-        elements.scrubberFill.style.width = (ratio * 100) + '%';
-        elements.scrubberHandle.style.left = (ratio * 100) + '%';
-        elements.scrubberPosition.textContent = engine.currentPos.toLocaleString();
+        renderScrubber(engine.currentPos);
         updateCurrentChapter();
         updateTimeRemaining();
+    }
+
+    function renderScrubber(pos) {
+        const ratio = engine.totalWords > 0 ? pos / engine.totalWords : 0;
+        elements.scrubberFill.style.width = (ratio * 100) + '%';
+        elements.scrubberHandle.style.left = (ratio * 100) + '%';
+        elements.scrubberPosition.textContent = pos.toLocaleString();
     }
 
     function updateTimeRemaining() {
@@ -244,6 +250,11 @@
 
     // Progress saving
     let pendingPosition = null;
+    let lastRequestedPos = null;
+    // Set when the position moves by a jump; the next save tells the server
+    // not to count the skipped words as read
+    let seekPending = false;
+
     function scheduleProgressSave(position) {
         pendingPosition = position;
         if (saveTimer) return;
@@ -267,10 +278,14 @@
         const readingTime = readingStartTime
             ? Math.round((Date.now() - readingStartTime) / 1000)
             : 0;
+        const seek = seekPending;
+        seekPending = false;
+        lastRequestedPos = position;
         try {
             await api.post(`/api/documents/${docId}/progress/`, {
                 position: position,
                 reading_time: readingTime,
+                seek: seek,
             });
             lastSavedPos = position;
             if (readingStartTime) {
@@ -279,7 +294,16 @@
             }
         } catch (err) {
             // Silent fail, will retry
+            if (seek) seekPending = true;
         }
+    }
+
+    // Called before a jump: save progress up to where the reader actually got,
+    // then flag the save after the jump as a seek
+    function markSeek() {
+        if (seekPending) return;
+        if (engine.currentPos !== lastRequestedPos) immediateSave(engine.currentPos);
+        seekPending = true;
     }
 
     // ======= Chapters =======
@@ -329,33 +353,57 @@
         if (idx < 0 || idx >= chapters.length || !engine) return;
         const wasPlaying = isPlaying();
         if (wasPlaying) elements.playPause.click();
-        jumpToPosition(chapters[idx].start);
-        if (wasPlaying) elements.playPause.click();
+        jumpToPosition(chapters[idx].start).then(landed => {
+            if (!landed) return;
+            immediateSave(engine.currentPos);
+            if (wasPlaying) elements.playPause.click();
+        });
     }
 
     elements.btnPrevChapter.addEventListener('click', () => jumpToChapter(currentChapterIdx - 1));
     elements.btnNextChapter.addEventListener('click', () => jumpToChapter(currentChapterIdx + 1));
 
     // ======= Scrubber drag =======
+    let jumpSeq = 0;
+
+    // Resolves true once the reader is at pos (after loading its words if needed),
+    // or false if the jump failed or a later jump superseded it
     function jumpToPosition(pos) {
         pos = Math.max(0, Math.min(engine.totalWords - 1, pos));
+        markSeek();
+        const seq = ++jumpSeq;
 
-        if (!engine.words.has(pos)) {
-            const fetchStart = Math.max(0, pos - 250);
-            api.get(`/api/documents/${docId}/words/?start=${fetchStart}&count=500`).then(data => {
-                engine.loadWords(data.words);
-                engine.setPosition(pos);
-                onPositionChange(pos);
-            });
-        } else {
+        if (engine.words.has(pos)) {
             engine.setPosition(pos);
             onPositionChange(pos);
+            return Promise.resolve(true);
         }
+
+        renderScrubber(pos);
+        const fetchStart = Math.max(0, pos - 250);
+        return api.get(`/api/documents/${docId}/words/?start=${fetchStart}&count=500`).then(data => {
+            engine.loadWords(data.words);
+            if (seq !== jumpSeq) return false;
+            engine.setPosition(pos);
+            onPositionChange(pos);
+            return true;
+        }).catch(() => false);
     }
 
     (function initScrubber() {
         const track = elements.scrubberTrack;
         let dragging = false;
+        let dragPos = 0;
+
+        function dragTo(pos) {
+            dragPos = pos;
+            // Move live through words already loaded; anywhere else is fetched once on release
+            if (engine.words.has(pos)) {
+                jumpToPosition(pos);
+            } else {
+                renderScrubber(pos);
+            }
+        }
 
         function posFromEvent(e) {
             const rect = track.getBoundingClientRect();
@@ -373,15 +421,13 @@
             if (wasPlaying) elements.playPause.click();
             track.dataset.wasPlaying = wasPlaying;
 
-            const pos = posFromEvent(e);
-            jumpToPosition(pos);
+            dragTo(posFromEvent(e));
             e.preventDefault();
         });
 
         track.addEventListener('pointermove', (e) => {
             if (!dragging || !engine) return;
-            const pos = posFromEvent(e);
-            jumpToPosition(pos);
+            dragTo(posFromEvent(e));
         });
 
         track.addEventListener('pointerup', (e) => {
@@ -389,10 +435,13 @@
             dragging = false;
             elements.scrubber.classList.remove('dragging');
 
-            if (track.dataset.wasPlaying === 'true') {
-                elements.playPause.click();
-            }
+            const resume = track.dataset.wasPlaying === 'true';
             delete track.dataset.wasPlaying;
+            jumpToPosition(dragPos).then(landed => {
+                if (!landed) return;
+                immediateSave(engine.currentPos);
+                if (resume) elements.playPause.click();
+            });
         });
     })();
 
@@ -866,6 +915,7 @@
             api.beacon(`/api/documents/${docId}/progress/`, {
                 position: engine.currentPos,
                 reading_time: readingStartTime ? Math.round((Date.now() - readingStartTime) / 1000) : 0,
+                seek: seekPending,
             });
         }
     });

@@ -1,6 +1,7 @@
 from io import StringIO
 from unittest import mock
 
+from django.core.cache import cache
 from django.core.management import CommandError, call_command
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
@@ -11,6 +12,7 @@ from apps.documents.models import Document
 from .models import User, UserPreferences
 
 
+@override_settings(ALLOW_REGISTRATION=True)
 class RegisterTests(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -58,6 +60,25 @@ class RegisterTests(TestCase):
         resp = self.client.post('/api/auth/register/', {'username': 'x'})
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_login_page_offers_registration(self):
+        self.assertContains(self.client.get('/'), 'id="register-form"')
+
+
+class RegistrationClosedTests(TestCase):
+    def test_register_is_refused(self):
+        resp = APIClient().post('/api/auth/register/', {
+            'username': 'newuser',
+            'email': 'new@example.com',
+            'password': 'testpass123',
+        })
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(User.objects.filter(username='newuser').exists())
+
+    def test_login_page_has_no_registration(self):
+        resp = self.client.get('/')
+        self.assertContains(resp, 'id="login-form"')
+        self.assertNotContains(resp, 'register')
+
 
 class LoginTests(TestCase):
     def setUp(self):
@@ -86,6 +107,30 @@ class LoginTests(TestCase):
             'password': 'testpass123',
         })
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+# Dev settings use a dummy cache, which never throttles
+@override_settings(CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}})
+class LoginThrottleTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        User.objects.create_user('testuser', 'test@example.com', 'testpass123')
+
+    def login(self, password, address='203.0.113.5'):
+        return APIClient().post(
+            '/api/auth/login/', {'username': 'testuser', 'password': password}, REMOTE_ADDR=address,
+        )
+
+    def test_blocks_guessing_after_ten_attempts(self):
+        for _ in range(10):
+            self.assertEqual(self.login('wrong').status_code, status.HTTP_401_UNAUTHORIZED)
+        # Even the right password is refused until the minute is up
+        self.assertEqual(self.login('testpass123').status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_limit_is_per_address(self):
+        for _ in range(10):
+            self.login('wrong')
+        self.assertEqual(self.login('testpass123', address='203.0.113.6').status_code, status.HTTP_200_OK)
 
 
 class LogoutTests(TestCase):

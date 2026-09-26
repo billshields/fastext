@@ -1,0 +1,17 @@
+[Unit]
+Description=fastext background worker (Celery: PDF/EPUB processing, Gutenberg downloads)
+After=network.target mysql.service redis-server.service
+Wants=mysql.service redis-server.service
+
+[Service]
+User=fastext
+Group=fastext
+WorkingDirectory=/srv/fastext
+EnvironmentFile=/srv/fastext/.env
+ExecStart=/srv/fastext/venv/bin/celery -A config worker --loglevel=info --concurrency=2
+# Let a running task finish before stopping
+TimeoutStopSec=120
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

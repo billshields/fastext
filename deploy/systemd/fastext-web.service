@@ -1,0 +1,24 @@
+[Unit]
+Description=fastext web app (gunicorn)
+After=network.target mysql.service redis-server.service
+Wants=mysql.service redis-server.service
+
+[Service]
+User=fastext
+# nginx runs as www-data and needs to reach the socket
+Group=www-data
+UMask=0007
+WorkingDirectory=/srv/fastext
+EnvironmentFile=/srv/fastext/.env
+RuntimeDirectory=fastext
+# URL imports fetch the page inside the request, and can take up to about a minute
+ExecStart=/srv/fastext/venv/bin/gunicorn config.wsgi:application \
+    --bind unix:/run/fastext/gunicorn.sock \
+    --workers 3 \
+    --timeout 90 \
+    --access-logfile -
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

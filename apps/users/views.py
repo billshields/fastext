@@ -1,8 +1,18 @@
+from django.conf import settings
 from rest_framework import generics, permissions, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .serializers import RegisterSerializer, UserPreferencesSerializer
+
+
+class LoginView(TokenObtainPairView):
+    # The login form is the main way in, so limit password guessing per client address
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'login'
 
 
 class RegisterView(generics.CreateAPIView):
@@ -10,6 +20,8 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
 
     def create(self, request, *args, **kwargs):
+        if not settings.ALLOW_REGISTRATION:
+            raise PermissionDenied('Registration is closed.')
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()

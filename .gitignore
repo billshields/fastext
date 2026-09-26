@@ -7,3 +7,4 @@ media/uploads/
 *.egg-info/
 .DS_Store
 CLAUDE.md
+staticfiles/

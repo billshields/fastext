@@ -22,10 +22,13 @@
         <input type="text" id="login-username" placeholder="Username" autocomplete="username">
         <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
         <button id="btn-login" class="btn btn-primary">Login</button>
+        {% if allow_registration %}
         <p class="auth-switch">Don't have an account? <a href="#" id="show-register">Register</a></p>
+        {% endif %}
         <p id="login-error" class="error-msg" hidden></p>
     </div>
 
+    {% if allow_registration %}
     <div id="register-form" class="auth-form" hidden>
         <h2>Register</h2>
         <input type="text" id="reg-username" placeholder="Username" autocomplete="username">
@@ -35,12 +38,36 @@
         <p class="auth-switch">Already have an account? <a href="#" id="show-login">Login</a></p>
         <p id="register-error" class="error-msg" hidden></p>
     </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
     fastextTheme.render(document.getElementById('theme-switcher'));
+
+    document.getElementById('btn-login').addEventListener('click', async () => {
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+        const errorEl = document.getElementById('login-error');
+        errorEl.hidden = true;
+
+        try {
+            const data = await api.post('/api/auth/login/', { username, password }, false);
+            api.setTokens(data.access, data.refresh);
+            location.replace('/library/');
+        } catch (err) {
+            errorEl.textContent = err.status === 429
+                ? 'Too many login attempts. Wait a minute and try again.'
+                : 'Invalid username or password.';
+            errorEl.hidden = false;
+        }
+    });
+
+    document.getElementById('login-password').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('btn-login').click();
+    });
+    {% if allow_registration %}
 
     // Only one form is on screen at a time; the links swap between them
     function showAuthForm(name) {
@@ -60,22 +87,6 @@
         showAuthForm('login');
     });
 
-    document.getElementById('btn-login').addEventListener('click', async () => {
-        const username = document.getElementById('login-username').value;
-        const password = document.getElementById('login-password').value;
-        const errorEl = document.getElementById('login-error');
-        errorEl.hidden = true;
-
-        try {
-            const data = await api.post('/api/auth/login/', { username, password }, false);
-            api.setTokens(data.access, data.refresh);
-            location.replace('/library/');
-        } catch (err) {
-            errorEl.textContent = 'Invalid username or password.';
-            errorEl.hidden = false;
-        }
-    });
-
     document.getElementById('btn-register').addEventListener('click', async () => {
         const username = document.getElementById('reg-username').value;
         const email = document.getElementById('reg-email').value;
@@ -93,12 +104,9 @@
         }
     });
 
-    // Allow Enter key to submit
-    document.getElementById('login-password').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') document.getElementById('btn-login').click();
-    });
     document.getElementById('reg-password').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') document.getElementById('btn-register').click();
     });
+    {% endif %}
 </script>
 {% endblock %}

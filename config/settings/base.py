@@ -49,6 +49,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'apps.users.context_processors.registration',
             ],
         },
     },
@@ -57,6 +58,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 AUTH_USER_MODEL = 'users.User'
+
+# Sign-up is closed unless turned on; create accounts with `manage.py createsuperuser`
+ALLOW_REGISTRATION = config('ALLOW_REGISTRATION', default=False, cast=bool)
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -74,6 +78,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_THROTTLE_RATES': {
+        'login': '10/minute',
+    },
 }
 
 # JWT

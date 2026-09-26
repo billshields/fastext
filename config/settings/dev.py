@@ -18,3 +18,11 @@ DATABASES = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+# No cache in dev, which also turns off login throttling. Otherwise every test that
+# logs in, all from the same address, would count toward one limit.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    }
+}

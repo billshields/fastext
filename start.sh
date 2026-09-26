@@ -29,7 +29,7 @@ fi
 
 # Start Celery worker
 echo "Starting Celery worker..."
-celery -A config worker --loglevel=info &
+celery -A config worker --loglevel=info --concurrency=2 &
 CELERY_PID=$!
 
 # Start Django dev server
